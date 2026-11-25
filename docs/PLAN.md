@@ -60,8 +60,8 @@ Jeder Meilenstein ist erst fertig, wenn sein Prüfkriterium erfüllt ist.
 
 ### M0 – Fundament
 
-- [ ] Python-Projekt, Abhängigkeiten, SQLite-Schema
-- [ ] Datentypen `Signal` (immer mit Quellenlink), `Order`, `Position`
+- [x] Python-Projekt, Abhängigkeiten, SQLite-Schema
+- [x] Datentypen `Signal` (immer mit Quellenlink), `Order`, `Position`
 - **Prüfung:** Tests für die Datentypen laufen grün.
 
 ### M1 – Paper-Trading-Engine
