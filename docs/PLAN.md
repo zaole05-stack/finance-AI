@@ -66,10 +66,11 @@ Jeder Meilenstein ist erst fertig, wenn sein Prüfkriterium erfüllt ist.
 
 ### M1 – Paper-Trading-Engine
 
-- [ ] Papier-Depot mit Startkapital
-- [ ] Ausführung jeder Order zweimal: sofort und mit 1 Stunde Verzögerung
-- [ ] Simulierte Gebühren, Steuern und Slippage
-- [ ] ETF-Vergleich über denselben Zeitraum
+- [x] Papier-Depot mit Startkapital
+- [x] Ausführung jeder Order zweimal: sofort und mit 1 Stunde Verzögerung
+- [x] Simulierte Gebühren, Steuern und Slippage
+- [x] ETF-Vergleich über denselben Zeitraum
+- [ ] Echte Kursquelle anbinden (bisher nur feste Kursreihen, `StaticPriceSource`)
 - **Prüfung:** Ein Test mit festen historischen Kursen ergibt die von Hand
   berechnete Rendite.
 
