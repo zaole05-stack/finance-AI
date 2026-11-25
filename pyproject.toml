@@ -3,7 +3,9 @@ name = "finance-ai"
 version = "0.1.0"
 description = "KI-Agenten fuer risikoreiche Investments mit Paper Trading"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "yfinance>=1.0",
+]
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -18,3 +20,5 @@ dev = ["pytest>=8"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+addopts = "-m 'not network'"
+markers = ["network: braucht Internet (Yahoo Finance); ausführen mit -m network"]

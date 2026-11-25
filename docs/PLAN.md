@@ -70,7 +70,7 @@ Jeder Meilenstein ist erst fertig, wenn sein Prüfkriterium erfüllt ist.
 - [x] Ausführung jeder Order zweimal: sofort und mit 1 Stunde Verzögerung
 - [x] Simulierte Gebühren, Steuern und Slippage
 - [x] ETF-Vergleich über denselben Zeitraum
-- [ ] Echte Kursquelle anbinden (bisher nur feste Kursreihen, `StaticPriceSource`)
+- [x] Echte Kursquelle: Stundenkurse von Yahoo Finance, zwischengespeichert in SQLite (`CachedPriceSource`)
 - **Prüfung:** Ein Test mit festen historischen Kursen ergibt die von Hand
   berechnete Rendite.
 

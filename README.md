@@ -7,7 +7,7 @@ einem Portfolio, zunächst nur im Paper Trading gegen einen Small-Cap-ETF.
 - [Konzept](docs/KONZEPT.md): was festgelegt ist und was offen ist
 - [Plan](docs/PLAN.md): Struktur, Datenquellen, Meilensteine
 
-Status: M0 (Fundament) und M1 (Paper-Trading-Engine, noch ohne echte Kursquelle) fertig.
+Status: M0 (Fundament) und M1 (Paper-Trading-Engine mit echten Stundenkursen) fertig.
 
 ## Entwicklung
 
@@ -15,4 +15,10 @@ Status: M0 (Fundament) und M1 (Paper-Trading-Engine, noch ohne echte Kursquelle)
 py -3.12 -m venv .venv
 .venv\Scripts\python -m pip install -e ".[dev]"
 .venv\Scripts\python -m pytest
+```
+
+Tests mit Internetzugriff (Yahoo Finance) laufen nur auf Wunsch:
+
+```powershell
+.venv\Scripts\python -m pytest -m network
 ```
