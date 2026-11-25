@@ -229,3 +229,17 @@ def test_compare_requires_same_start_cash():
     b = Account("b", D("2000"), NO_SLIP)
     with pytest.raises(ValueError):
         compare(a, b, at("02-02", 16), PRICES)
+
+
+def test_simulate_until_leaves_orders_pending_and_ignores_later_prices():
+    orders = [order(Side.BUY, "10", at("01-05", 15)), order(Side.SELL, "10", at("02-02", 15))]
+    # Am 05.01. um 15:30: sofortiger Kauf hat einen Kurs, der verzögerte (16:00) noch nicht.
+    early = simulate(orders, PRICES, D("1000"), NO_SLIP, until=at("01-05", 15) + timedelta(minutes=30))
+    accounts = early[MAIN_PORTFOLIO]
+    assert [p.ticker for p in accounts.immediate.positions] == ["ABCD"]
+    assert accounts.delayed.positions == []
+    assert accounts.pending_immediate == (orders[1].id,)
+    assert accounts.pending_delayed == (orders[0].id, orders[1].id)
+    assert accounts.delayed.rejections == []
+    # Ohne Stichtag wird wie bisher alles ausgeführt.
+    assert simulate(orders, PRICES, D("1000"), NO_SLIP)[MAIN_PORTFOLIO].pending_delayed == ()

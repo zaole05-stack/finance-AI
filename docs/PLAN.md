@@ -112,11 +112,22 @@ sobald das Budget feststeht.
 
 ### M4 – Dashboard
 
-- [ ] Briefings und Begründungen der Orders
-- [ ] Kennzahlen: Haupt-Portfolio und jeder Experte gegen den ETF, sofort und
+- [x] Briefings und Begründungen der Orders
+- [x] Kennzahlen: Haupt-Portfolio und jeder Experte gegen den ETF, sofort und
       verzögert
-- [ ] Warnung, sobald eine Abbruchregel greift
+- [x] Warnung, sobald eine Abbruchregel greift
+- [x] Einstellungen im Dashboard änderbar (ETF, Teststart, Regeln, Kosten),
+      gespeichert in der Datenbank
 - **Prüfung:** Alle Zahlen im Dashboard stimmen mit der Auswertung überein.
+  Erfüllt: Das Dashboard rechnet nicht selbst, es zeigt das Ergebnis von
+  `evaluate` (Test `test_overview_numbers_equal_evaluation`).
+- Nebenbei behoben: Die Auswertung nutzt nur Kurse bis zum Stichtag. Orders
+  ohne Kurs (direkt nach der Entscheidung, nachts, am Wochenende) gelten als
+  offen statt abgelehnt. Vorher brach die Auswertung dann ab oder nahm spätere
+  Kurse.
+- Offen: Die gespeicherten Regeln wirken erst, wenn der Dauerbetrieb (M6) sie
+  beim Entscheidungslauf lädt. Scan und Entscheidung starten noch nicht aus dem
+  Dashboard.
 
 ### M5 – Weitere Experten
 
