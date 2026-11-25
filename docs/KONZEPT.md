@@ -109,3 +109,8 @@ Unternehmen und Nischenwerten.
       Begründung? Marktrelevanz von Barron Trump ist unbelegt.
 - [ ] Zugang zu Social Media ohne API (X und Truth Social)
 - [ ] Welcher Small-Cap-ETF konkret der Vergleichsmaßstab ist
+- [ ] Standardwerte des Entscheidungs-Agenten bestätigen: 10 Plätze,
+      91 Tage Haltedauer, Börsenwert bis 2 Mrd. USD (siehe PLAN.md, M3)
+- [ ] Abbruchregel während des Testlaufs: Umgesetzt ist nur die harte Grenze
+      (mehr als 20 % Verlust). Ein Rückstand zum ETF wird gemeldet, beendet den
+      Lauf aber erst bei der Auswertung nach 6 Monaten.

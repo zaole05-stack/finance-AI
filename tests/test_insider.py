@@ -235,3 +235,28 @@ def test_scan_day_skips_unreachable_filing():
 
     signals = insider.scan_day(Partial(), date(2026, 11, 24), clock=lambda: LATER)
     assert [s.ticker for s in signals] == ["ALDX"]
+
+
+def test_issuer_sic_from_header():
+    assert filing(ALDX).issuer_sic == "2834"  # Pharma
+    assert filing(CBK).issuer_sic == "6022"  # Bank
+
+
+@pytest.mark.parametrize("sic", [None, "6798", "6726", "6770"])
+def test_funds_reits_and_spacs_give_no_signal(sic):
+    from dataclasses import replace
+
+    assert insider.signal_from_filing(replace(filing(ALDX), issuer_sic=sic), LATER) is None
+
+
+def test_confidence_ranks_top_executives_higher():
+    from finance_ai.data.form4 import Owner
+
+    def owner(title, officer=True, director=False):
+        return Owner("X", director, officer, False, title)
+
+    assert insider.signal_from_filing(filing(ALDX), LATER).confidence == 0.6
+    assert insider._confidence([owner("Chief Financial Officer")]) == 0.6
+    assert insider._confidence([owner("Chairman of the Board")]) == 0.6
+    assert insider._confidence([owner("Executive Vice President, Sales")]) == 0.5
+    assert insider._confidence([owner("", officer=False, director=True)]) == 0.5

@@ -54,6 +54,16 @@ CREATE TABLE IF NOT EXISTS positions (
     PRIMARY KEY (portfolio, ticker)
 );
 
+-- Jedes Signal wird je Portfolio genau einmal entschieden: Order oder Ablehnung mit Grund.
+CREATE TABLE IF NOT EXISTS decisions (
+    signal_id  TEXT NOT NULL REFERENCES signals (id),
+    portfolio  TEXT NOT NULL,
+    decided_at TEXT NOT NULL,
+    order_id   TEXT REFERENCES orders (id),
+    reason     TEXT NOT NULL,
+    PRIMARY KEY (signal_id, portfolio)
+);
+
 -- Kursbalken: Eröffnungskurs gilt ab bar_start, Schlusskurs erst ab bar_end.
 CREATE TABLE IF NOT EXISTS price_bars (
     ticker     TEXT NOT NULL,
@@ -130,28 +140,98 @@ def list_signals(conn: sqlite3.Connection, expert: str | None = None) -> list[Si
 def save_order(conn: sqlite3.Connection, order: Order) -> None:
     """Speichert die Order samt Verweisen. Alle Signale müssen schon gespeichert sein."""
     with conn:
-        conn.execute(
-            "INSERT INTO orders VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (
-                order.id,
-                order.portfolio,
-                order.ticker,
-                order.side.value,
-                str(order.quantity),
-                to_db_time(order.created_at),
-                order.rationale,
-            ),
-        )
-        conn.executemany(
-            "INSERT INTO order_signals VALUES (?, ?, ?)",
-            [(order.id, signal_id, i) for i, signal_id in enumerate(order.signal_ids)],
-        )
+        _insert_order(conn, order)
+
+
+def _insert_order(conn: sqlite3.Connection, order: Order) -> None:
+    conn.execute(
+        "INSERT INTO orders VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            order.id,
+            order.portfolio,
+            order.ticker,
+            order.side.value,
+            str(order.quantity),
+            to_db_time(order.created_at),
+            order.rationale,
+        ),
+    )
+    conn.executemany(
+        "INSERT INTO order_signals VALUES (?, ?, ?)",
+        [(order.id, signal_id, i) for i, signal_id in enumerate(order.signal_ids)],
+    )
 
 
 def get_order(conn: sqlite3.Connection, order_id: str) -> Order | None:
     row = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
-    if row is None:
-        return None
+    return _order_from_row(conn, row) if row else None
+
+
+def list_orders(conn: sqlite3.Connection, portfolio: str | None = None) -> list[Order]:
+    """Alle Orders, optional nur eines Portfolios, nach Erzeugungszeit sortiert."""
+    if portfolio is None:
+        rows = conn.execute("SELECT * FROM orders ORDER BY created_at, id").fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM orders WHERE portfolio = ? ORDER BY created_at, id", (portfolio,)
+        ).fetchall()
+    return [_order_from_row(conn, row) for row in rows]
+
+
+def pending_signals(
+    conn: sqlite3.Connection, portfolio: str, until: datetime, expert: str | None = None
+) -> list[Signal]:
+    """Signale bis `until`, über die für dieses Portfolio noch nicht entschieden wurde."""
+    query = (
+        "SELECT * FROM signals WHERE created_at <= ? AND id NOT IN "
+        "(SELECT signal_id FROM decisions WHERE portfolio = ?)"
+    )
+    params: list = [to_db_time(until), portfolio]
+    if expert is not None:
+        query += " AND expert = ?"
+        params.append(expert)
+    rows = conn.execute(query + " ORDER BY created_at, id", params)
+    return [_signal_from_row(row) for row in rows]
+
+
+def save_decision(
+    conn: sqlite3.Connection,
+    portfolio: str,
+    decided_at: datetime,
+    orders: Iterable[Order],
+    outcomes: Iterable[tuple[str, str | None, str]],
+) -> None:
+    """Speichert Orders und Entscheidungen atomar.
+
+    `outcomes` enthält je Signal (signal_id, order_id oder None, Grund).
+    """
+    with conn:
+        for order in orders:
+            _insert_order(conn, order)
+        conn.executemany(
+            "INSERT INTO decisions VALUES (?, ?, ?, ?, ?)",
+            [
+                (signal_id, portfolio, to_db_time(decided_at), order_id, reason)
+                for signal_id, order_id, reason in outcomes
+            ],
+        )
+
+
+def list_decisions(conn: sqlite3.Connection, portfolio: str) -> list[sqlite3.Row]:
+    """Alle Entscheidungen eines Portfolios mit Signal, für Briefing und Dashboard."""
+    return conn.execute(
+        """
+        SELECT d.signal_id, d.decided_at, d.order_id, d.reason, s.expert, s.ticker, s.summary,
+               s.source_url
+        FROM decisions d JOIN signals s ON s.id = d.signal_id
+        WHERE d.portfolio = ? ORDER BY d.decided_at, s.ticker, d.signal_id
+        """,
+        (portfolio,),
+    ).fetchall()
+
+
+def _order_from_row(conn: sqlite3.Connection, row: sqlite3.Row) -> Order:
+    order_id = row["id"]
     signal_ids = tuple(
         r["signal_id"]
         for r in conn.execute(
