@@ -5,6 +5,7 @@ description = "KI-Agenten fuer risikoreiche Investments mit Paper Trading"
 requires-python = ">=3.12"
 dependencies = [
     "yfinance>=1.0",
+    "python-dotenv>=1.0",
 ]
 
 [build-system]

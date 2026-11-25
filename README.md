@@ -7,7 +7,7 @@ einem Portfolio, zunächst nur im Paper Trading gegen einen Small-Cap-ETF.
 - [Konzept](docs/KONZEPT.md): was festgelegt ist und was offen ist
 - [Plan](docs/PLAN.md): Struktur, Datenquellen, Meilensteine
 
-Status: M0 (Fundament) und M1 (Paper-Trading-Engine mit echten Stundenkursen) fertig.
+Status: M0 (Fundament), M1 (Paper-Trading-Engine mit echten Stundenkursen) und M2 (Insider-Experte auf SEC Form 4) fertig.
 
 ## Entwicklung
 
@@ -17,7 +17,11 @@ py -3.12 -m venv .venv
 .venv\Scripts\python -m pytest
 ```
 
-Tests mit Internetzugriff (Yahoo Finance) laufen nur auf Wunsch:
+Für Abrufe bei der SEC wird ein User-Agent mit Name und E-Mail-Adresse
+gebraucht (Vorgabe der SEC). Dazu `.env.example` nach `.env` kopieren und
+`SEC_USER_AGENT` ausfüllen. Die `.env` wird nicht committet.
+
+Tests mit Internetzugriff (Yahoo Finance, SEC EDGAR) laufen nur auf Wunsch:
 
 ```powershell
 .venv\Scripts\python -m pytest -m network
