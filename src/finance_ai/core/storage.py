@@ -52,6 +52,18 @@ CREATE TABLE IF NOT EXISTS positions (
     avg_price TEXT NOT NULL,
     PRIMARY KEY (portfolio, ticker)
 );
+
+-- Kursbalken: Eröffnungskurs gilt ab bar_start, Schlusskurs erst ab bar_end.
+CREATE TABLE IF NOT EXISTS price_bars (
+    ticker     TEXT NOT NULL,
+    bar_start  TEXT NOT NULL,
+    bar_end    TEXT NOT NULL,
+    open       TEXT NOT NULL,
+    close      TEXT NOT NULL,
+    PRIMARY KEY (ticker, bar_start),
+    CHECK (bar_end > bar_start)
+);
+CREATE INDEX IF NOT EXISTS price_bars_end ON price_bars (ticker, bar_end);
 """
 
 
@@ -75,8 +87,8 @@ def save_signal(conn: sqlite3.Connection, signal: Signal) -> None:
                 signal.side.value,
                 signal.source_url,
                 signal.summary,
-                _to_db_time(signal.observed_at),
-                _to_db_time(signal.created_at),
+                to_db_time(signal.observed_at),
+                to_db_time(signal.created_at),
                 signal.confidence,
             ),
         )
@@ -109,7 +121,7 @@ def save_order(conn: sqlite3.Connection, order: Order) -> None:
                 order.ticker,
                 order.side.value,
                 str(order.quantity),
-                _to_db_time(order.created_at),
+                to_db_time(order.created_at),
                 order.rationale,
             ),
         )
@@ -135,7 +147,7 @@ def get_order(conn: sqlite3.Connection, order_id: str) -> Order | None:
         ticker=row["ticker"],
         side=Side(row["side"]),
         quantity=Decimal(row["quantity"]),
-        created_at=_from_db_time(row["created_at"]),
+        created_at=from_db_time(row["created_at"]),
         signal_ids=signal_ids,
         rationale=row["rationale"],
         id=row["id"],
@@ -186,17 +198,17 @@ def _signal_from_row(row: sqlite3.Row) -> Signal:
         side=Side(row["side"]),
         source_url=row["source_url"],
         summary=row["summary"],
-        observed_at=_from_db_time(row["observed_at"]),
-        created_at=_from_db_time(row["created_at"]),
+        observed_at=from_db_time(row["observed_at"]),
+        created_at=from_db_time(row["created_at"]),
         confidence=row["confidence"],
         id=row["id"],
     )
 
 
-def _to_db_time(value: datetime) -> str:
+def to_db_time(value: datetime) -> str:
     # Immer UTC, damit ORDER BY auf dem Text chronologisch sortiert.
     return value.astimezone(UTC).isoformat(timespec="microseconds")
 
 
-def _from_db_time(value: str) -> datetime:
+def from_db_time(value: str) -> datetime:
     return datetime.fromisoformat(value)
