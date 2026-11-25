@@ -1,0 +1,163 @@
+<SEC-DOCUMENT>0001193125-26-473131.txt : 20261124
+<SEC-HEADER>0001193125-26-473131.hdr.sgml : 20261124
+<ACCEPTANCE-DATETIME>20261124065832
+ACCESSION NUMBER:		0001193125-26-473131
+CONFORMED SUBMISSION TYPE:	4
+PUBLIC DOCUMENT COUNT:		1
+CONFORMED PERIOD OF REPORT:	20261120
+FILED AS OF DATE:		20261124
+DATE AS OF CHANGE:		20261124
+
+REPORTING-OWNER:	
+
+	OWNER DATA:	
+		COMPANY CONFORMED NAME:			Brady Todd C
+		CENTRAL INDEX KEY:			0001579179
+		ORGANIZATION NAME:           	
+
+	FILING VALUES:
+		FORM TYPE:		4
+		SEC ACT:		1934 Act
+		SEC FILE NUMBER:	001-36332
+		FILM NUMBER:		261586239
+
+	MAIL ADDRESS:	
+		STREET 1:		C/O EVOKE PHARMA, INC.
+		STREET 2:		505 LOMAS SANTA FE DRIVE
+		CITY:			SOLANA BEACH
+		STATE:			CA
+		ZIP:			92075
+
+ISSUER:		
+
+	COMPANY DATA:	
+		COMPANY CONFORMED NAME:			Aldeyra Therapeutics, Inc.
+		CENTRAL INDEX KEY:			0001341235
+		STANDARD INDUSTRIAL CLASSIFICATION:	PHARMACEUTICAL PREPARATIONS [2834]
+		ORGANIZATION NAME:           	03 Life Sciences
+		EIN:				000000000
+		STATE OF INCORPORATION:			DE
+		FISCAL YEAR END:			1231
+
+	BUSINESS ADDRESS:	
+		STREET 1:		23 BRADFORD STREET
+		STREET 2:		SUITE 1
+		CITY:			CONCORD
+		STATE:			MA
+		ZIP:			01742
+		BUSINESS PHONE:		781-761-4904
+
+	MAIL ADDRESS:	
+		STREET 1:		23 BRADFORD STREET
+		STREET 2:		SUITE 1
+		CITY:			CONCORD
+		STATE:			MA
+		ZIP:			01742
+
+	FORMER COMPANY:	
+		FORMER CONFORMED NAME:	Aldexa Therapeutics, Inc.
+		DATE OF NAME CHANGE:	20130102
+
+	FORMER COMPANY:	
+		FORMER CONFORMED NAME:	Neuron Systems Inc
+		DATE OF NAME CHANGE:	20051012
+</SEC-HEADER>
+<DOCUMENT>
+<TYPE>4
+<SEQUENCE>1
+<FILENAME>ownership.xml
+<DESCRIPTION>4
+<TEXT>
+<XML>
+<?xml version="1.0"?>
+<ownershipDocument>
+
+    <schemaVersion>X0609</schemaVersion>
+
+    <documentType>4</documentType>
+
+    <periodOfReport>2026-11-20</periodOfReport>
+
+    <issuer>
+        <issuerCik>0001341235</issuerCik>
+        <issuerName>Aldeyra Therapeutics, Inc.</issuerName>
+        <issuerTradingSymbol>ALDX</issuerTradingSymbol>
+        <issuerForeignTradingSymbol></issuerForeignTradingSymbol>
+    </issuer>
+
+    <reportingOwner>
+        <reportingOwnerId>
+            <rptOwnerCik>0001579179</rptOwnerCik>
+            <rptOwnerName>Brady Todd C</rptOwnerName>
+        </reportingOwnerId>
+        <reportingOwnerAddress>
+            <rptOwnerNonUSAddressFlag>false</rptOwnerNonUSAddressFlag>
+            <rptOwnerStreet1>C/O ALDEYRA THERAPEUTICS, INC.</rptOwnerStreet1>
+            <rptOwnerStreet2>23 BRADFORD STREET</rptOwnerStreet2>
+            <rptOwnerCity>CONCORD</rptOwnerCity>
+            <rptOwnerState>MA</rptOwnerState>
+            <rptOwnerZipCode>01742</rptOwnerZipCode>
+            <rptOwnerStateDescription></rptOwnerStateDescription>
+        </reportingOwnerAddress>
+        <reportingOwnerRelationship>
+            <isDirector>true</isDirector>
+            <isOfficer>true</isOfficer>
+            <isTenPercentOwner>false</isTenPercentOwner>
+            <isOther>false</isOther>
+            <officerTitle>President and CEO</officerTitle>
+        </reportingOwnerRelationship>
+    </reportingOwner>
+
+    <aff10b5One>false</aff10b5One>
+
+    <nonDerivativeTable>
+        <nonDerivativeTransaction>
+            <securityTitle>
+                <value>Common Stock</value>
+            </securityTitle>
+            <transactionDate>
+                <value>2026-11-20</value>
+            </transactionDate>
+            <transactionCoding>
+                <transactionFormType>4</transactionFormType>
+                <transactionCode>P</transactionCode>
+                <equitySwapInvolved>false</equitySwapInvolved>
+            </transactionCoding>
+            <transactionAmounts>
+                <transactionShares>
+                    <value>300000</value>
+                </transactionShares>
+                <transactionPricePerShare>
+                    <value>0.8102</value>
+                    <footnoteId id="F1"/>
+                </transactionPricePerShare>
+                <transactionAcquiredDisposedCode>
+                    <value>A</value>
+                </transactionAcquiredDisposedCode>
+            </transactionAmounts>
+            <postTransactionAmounts>
+                <sharesOwnedFollowingTransaction>
+                    <value>2021298</value>
+                </sharesOwnedFollowingTransaction>
+            </postTransactionAmounts>
+            <ownershipNature>
+                <directOrIndirectOwnership>
+                    <value>D</value>
+                </directOrIndirectOwnership>
+            </ownershipNature>
+        </nonDerivativeTransaction>
+    </nonDerivativeTable>
+
+    <footnotes>
+        <footnote id="F1">The price reported in column 4 is a weighted average price. The shares were purchased in multiple transactions at prices ranging from $0.748 to $0.8779. The Reporting Person undertakes to provide to the Issuer, any security holder of the Issuer, or the staff of the Securities and Exchange Commission, upon request, full information regarding the number of shares purchased at each separate price within the range set forth in this footnote.</footnote>
+    </footnotes>
+
+    <ownerSignature>
+        <signatureName>/s/ Todd C. Brady</signatureName>
+        <signatureDate>2026-11-24</signatureDate>
+    </ownerSignature>
+</ownershipDocument>
+</XML>
+</TEXT>
+</DOCUMENT>
+</SEC-DOCUMENT>

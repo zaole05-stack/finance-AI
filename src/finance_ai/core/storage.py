@@ -7,6 +7,7 @@ Rundung zurückkommt. Zeitpunkte werden in UTC als ISO-8601 gespeichert.
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from decimal import Decimal
 from os import PathLike
@@ -78,20 +79,36 @@ def connect(path: str | PathLike[str] = ":memory:") -> sqlite3.Connection:
 
 def save_signal(conn: sqlite3.Connection, signal: Signal) -> None:
     with conn:
-        conn.execute(
-            "INSERT INTO signals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                signal.id,
-                signal.expert,
-                signal.ticker,
-                signal.side.value,
-                signal.source_url,
-                signal.summary,
-                to_db_time(signal.observed_at),
-                to_db_time(signal.created_at),
-                signal.confidence,
-            ),
+        conn.execute("INSERT INTO signals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", _signal_row(signal))
+
+
+def save_new_signals(conn: sqlite3.Connection, signals: Iterable[Signal]) -> int:
+    """Speichert nur Signale, deren ID noch fehlt. Gibt die Anzahl neuer Signale zurück.
+
+    So kann ein Experte denselben Tag mehrmals abrufen, ohne doppelte Signale.
+    Ein schon gespeichertes Signal bleibt unverändert, auch sein `created_at`.
+    """
+    with conn:
+        before = conn.total_changes
+        conn.executemany(
+            "INSERT OR IGNORE INTO signals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [_signal_row(signal) for signal in signals],
         )
+        return conn.total_changes - before
+
+
+def _signal_row(signal: Signal) -> tuple:
+    return (
+        signal.id,
+        signal.expert,
+        signal.ticker,
+        signal.side.value,
+        signal.source_url,
+        signal.summary,
+        to_db_time(signal.observed_at),
+        to_db_time(signal.created_at),
+        signal.confidence,
+    )
 
 
 def get_signal(conn: sqlite3.Connection, signal_id: str) -> Signal | None:

@@ -1,0 +1,23 @@
+Description:           Daily Index of EDGAR Dissemination Feed by Form Type
+Last Data Received:    Nov 24, 2026
+Comments:              webmaster@sec.gov
+Anonymous FTP:         ftp://ftp.sec.gov/edgar/
+
+
+
+
+Form Type   Company Name                                                  CIK
+      Date Filed  File Name
+---------------------------------------------------------------------------------------------------------------------------------------------
+4/A              AG Asset Strategies LLC                                       2027026     20261124    edgar/data/2027026/0001628280-26-075849.txt
+8-K              ABERCROMBIE & FITCH CO /DE/                                   1018840     20261124    edgar/data/1018840/0001018840-26-000052.txt
+4                Abrahams Riad M                                               1370104     20261124    edgar/data/1370104/0001193125-26-476047.txt
+4                Aldeyra Therapeutics, Inc.                                    1341235     20261124    edgar/data/1341235/0001193125-26-473131.txt
+4                Blackstone Multi-Strategy Hedge Fund L.P.                     2095486     20261124    edgar/data/2095486/0001193125-26-476047.txt
+4                Brady Todd C                                                  1579179     20261124    edgar/data/1579179/0001193125-26-473131.txt
+4                Commercial Bancgroup, Inc.                                    1981546     20261124    edgar/data/1981546/0000898432-26-000808.txt
+4                DONEGAL GROUP INC                                             800457      20261124    edgar/data/800457/0000935596-26-000033.txt
+4                DONEGAL MUTUAL INSURANCE CO                                   935596      20261124    edgar/data/935596/0000935596-26-000033.txt
+4                Hoffmann David Henry                                          2111899     20261124    edgar/data/2111899/0001183010-26-000071.txt
+4                LEE ENTERPRISES, Inc                                          58361       20261124    edgar/data/58361/0001183010-26-000071.txt
+4                Metheny Philip J.                                             2087401     20261124    edgar/data/2087401/0000898432-26-000808.txt

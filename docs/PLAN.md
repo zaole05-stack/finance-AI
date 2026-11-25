@@ -76,13 +76,22 @@ Jeder Meilenstein ist erst fertig, wenn sein Prüfkriterium erfüllt ist.
 
 ### M2 – Insider-Experte (erster Experte)
 
-- [ ] Form-4-Meldungen von EDGAR abrufen und nur **Käufe** herausfiltern
-- [ ] Daraus Signale mit Quellenlink erzeugen
-- **Prüfung:** Für einen bekannten vergangenen Insider-Kauf entsteht das
-  richtige Signal.
+- [x] Form-4-Meldungen von EDGAR abrufen und nur **Käufe** herausfiltern
+  (Tagesindex, Code P, nur Officers/Directors, ohne 10b5-1-Pläne, ab 25.000 USD)
+- [x] Daraus Signale mit Quellenlink erzeugen (ein Signal je Meldung)
+- [x] **Prüfung:** Für einen bekannten vergangenen Insider-Kauf entsteht das
+  richtige Signal (Aldeyra Therapeutics, CEO, 24.11.2026, Test mit der
+  echten Meldung).
 
-Der Insider-Experte kommt zuerst, weil seine Quelle die am besten belegte ist,
-die geringste Verzögerung hat und kostenlos ist.
+Der Insider-Experte kommt zuerst, weil seine Quelle die am besten belegte und
+kostenlos ist.
+
+Offen für später:
+- Der Tagesindex erscheint erst nach Tagesende. Signale kommen also bis zu
+  einen Tag nach der Meldung. Schneller ginge es über den Atom-Feed der SEC.
+- Routinemäßige Käufer erkennen (Cohen, Malloy & Pomorski 2012). Das braucht
+  mehrere Jahre Historie je Person.
+- Filter auf kleine Firmen nach Börsenwert.
 
 ### M3 – Entscheidungs-Agent und Schatten-Bewertung
 
