@@ -30,6 +30,8 @@ MIN_INTERVAL_SECONDS = 0.125
 _ACCEPTANCE = re.compile(r"<ACCEPTANCE-DATETIME>(\d{14})")
 _XML = re.compile(r"<XML>\s*(.*?)\s*</XML>", re.DOTALL)
 _ACCESSION = re.compile(r"(\d{10}-\d{2}-\d{6})\.txt$")
+_ISSUER_BLOCK = re.compile(r"^ISSUER:(.*?)(?=^\S|\Z)", re.MULTILINE | re.DOTALL)
+_SIC = re.compile(r"STANDARD INDUSTRIAL CLASSIFICATION:[^\[\n]*\[(\d{4})\]")
 
 
 class EdgarClient:
@@ -108,6 +110,8 @@ class Filing:
     ref: FilingRef
     accepted_at: datetime
     xml: str
+    # Branchencode des Emittenten. Fehlt meist bei Fonds und BDCs.
+    issuer_sic: str | None = None
 
 
 def daily_index_url(day: date) -> str:
@@ -140,7 +144,14 @@ def parse_submission(ref: FilingRef, text: str) -> Filing:
     if accepted is None or xml is None:
         raise ValueError(f"Meldung {ref.accession} hat keine Annahmezeit oder kein XML")
     accepted_at = datetime.strptime(accepted.group(1), "%Y%m%d%H%M%S").replace(tzinfo=EASTERN)
-    return Filing(ref, accepted_at, xml.group(1))
+    return Filing(ref, accepted_at, xml.group(1), _issuer_sic(text))
+
+
+def _issuer_sic(text: str) -> str | None:
+    header = text.split("</SEC-HEADER>", 1)[0]
+    block = _ISSUER_BLOCK.search(header)
+    sic = _SIC.search(block.group(1)) if block else None
+    return sic.group(1) if sic else None
 
 
 def form4_filings(client: EdgarClient, day: date) -> list[FilingRef]:

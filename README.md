@@ -7,7 +7,7 @@ einem Portfolio, zunächst nur im Paper Trading gegen einen Small-Cap-ETF.
 - [Konzept](docs/KONZEPT.md): was festgelegt ist und was offen ist
 - [Plan](docs/PLAN.md): Struktur, Datenquellen, Meilensteine
 
-Status: M0 (Fundament), M1 (Paper-Trading-Engine mit echten Stundenkursen) und M2 (Insider-Experte auf SEC Form 4) fertig.
+Status: M0 (Fundament), M1 (Paper-Trading-Engine mit echten Stundenkursen) M2 (Insider-Experte auf SEC Form 4) und M3 (Entscheidungs-Agent mit Schattenbewertung) fertig.
 
 ## Entwicklung
 

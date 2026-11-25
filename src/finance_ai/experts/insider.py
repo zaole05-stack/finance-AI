@@ -13,11 +13,21 @@ Regeln für ein Signal:
 - Keine Käufe aus einem vorab festgelegten 10b5-1-Plan.
 - Mindestwert je Meldung (Standard 25.000 USD), damit symbolische Käufe
   nicht zählen.
+- Keine Fonds, BDCs, REITs, Royalty Trusts oder SPACs. Erkannt am Branchencode
+  (SIC) im Kopf der Meldung. Fehlt der Code, ist es fast immer ein Fonds oder
+  eine BDC, deshalb fällt die Meldung dann ebenfalls weg.
 - Ein Signal je Meldung. Mehrere Käufe derselben Meldung werden summiert.
 
+Konfidenz als Rangfolge, nicht als Wahrscheinlichkeit: Käufe der obersten
+Führung (CEO, CFO, President, Chair, COO) 0,6, übrige Officers und Directors
+0,5. Grundlage ist die Informations-Hierarchie, nach der die oberste Führung
+am besten informiert ist (Seyhun 1986, Journal of Financial Economics). Die
+Werte sind gesetzt, nicht geschätzt. Die Schattenbewertung soll sie später
+bestätigen oder verwerfen.
+
 Noch nicht umgesetzt: Erkennung routinemäßiger Käufer nach Cohen et al.
-(braucht mehrere Jahre Historie je Person) und ein Filter auf kleine Firmen.
-Die Konfidenz ist pauschal 0,5, bis die Schattenbewertung echte Werte liefert.
+(braucht mehrere Jahre Historie je Person). Der Filter auf kleine Firmen
+sitzt im Entscheidungs-Agenten, weil er einen aktuellen Börsenwert braucht.
 """
 
 from __future__ import annotations
@@ -33,7 +43,12 @@ from finance_ai.data.sec_edgar import EdgarClient, Filing, fetch_filing, form4_f
 
 EXPERT = "insider"
 DEFAULT_MIN_VALUE = Decimal("25000")
+TOP_EXECUTIVE_CONFIDENCE = 0.6
 DEFAULT_CONFIDENCE = 0.5
+# Branchencodes ohne operatives Geschäft: Fonds, SPACs, Royalty Trusts, REITs.
+EXCLUDED_SIC = frozenset({"6722", "6726", "6770", "6792", "6795", "6798", "6799"})
+_TOP_TITLES = ("ceo", "chief executive", "cfo", "chief financial", "president",
+               "chair", "coo", "chief operating")
 
 log = logging.getLogger(__name__)
 Clock = Callable[[], datetime]
@@ -49,6 +64,8 @@ def signal_from_filing(
     min_value: Decimal = DEFAULT_MIN_VALUE,
 ) -> Signal | None:
     """Ein Kaufsignal, wenn die Meldung alle Regeln erfüllt, sonst None."""
+    if filing.issuer_sic is None or filing.issuer_sic in EXCLUDED_SIC:
+        return None
     doc = parse_form4(filing.xml)
     insiders = [o for o in doc.owners if o.is_officer or o.is_director]
     if doc.ticker is None or doc.is_10b5_1_plan or not insiders:
@@ -70,8 +87,16 @@ def signal_from_filing(
                          max(t.day for t in buys)),
         observed_at=filing.accepted_at,
         created_at=created_at,
-        confidence=DEFAULT_CONFIDENCE,
+        confidence=_confidence(insiders),
     )
+
+
+def _confidence(insiders) -> float:
+    titles = " ".join(o.officer_title.lower() for o in insiders if o.is_officer)
+    # "president" steckt auch in "Vice President". Das ist keine oberste Führung.
+    titles = titles.replace("vice president", "")
+    top = any(word in titles for word in _TOP_TITLES)
+    return TOP_EXECUTIVE_CONFIDENCE if top else DEFAULT_CONFIDENCE
 
 
 def scan_day(

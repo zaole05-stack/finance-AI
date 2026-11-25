@@ -95,11 +95,20 @@ Offen für später:
 
 ### M3 – Entscheidungs-Agent und Schatten-Bewertung
 
-- [ ] Der Entscheidungs-Agent erzeugt aus den Signalen Orders für das
-      Haupt-Portfolio, mit begründetem Briefing
-- [ ] Jedes Expertensignal wird zusätzlich einzeln im Schatten bewertet
-- **Prüfung:** Für jede Order lässt sich nachvollziehen, welche Signale dazu
-  geführt haben.
+- [x] Der Entscheidungs-Agent erzeugt aus den Signalen Orders für das
+      Haupt-Portfolio, mit begründetem Briefing (vorerst feste Regeln ohne LLM)
+- [x] Jedes Expertensignal wird zusätzlich einzeln im Schatten bewertet
+- [x] Vorfilter: keine Fonds, BDCs, REITs, SPACs; Börsenwert bis 2 Mrd. USD;
+      oberste Führung (CEO, CFO …) mit höherem Rang
+- [x] Auswertung je Portfolio gegen den ETF mit Urteil nach den Konzept-Regeln
+- [x] **Prüfung:** Für jede Order lässt sich nachvollziehen, welche Signale dazu
+  geführt haben. Auch jedes abgelehnte Signal ist mit Grund gespeichert.
+
+Gesetzte Standardwerte (in `DecisionRules`, noch nicht bestätigt):
+10 Plätze zu je 10 % des Startkapitals, Haltedauer 91 Tage, Signale höchstens
+3 Tage alt. Für das Urteil zählt die Ausführung mit 1 Stunde Verzögerung.
+Ein LLM kann später die übrig gebliebenen Kandidaten zusätzlich prüfen,
+sobald das Budget feststeht.
 
 ### M4 – Dashboard
 
