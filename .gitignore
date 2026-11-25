@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Lokale Daten und Geheimnisse
+.env
+*.sqlite
+*.db
+
+# Gerenderte Doku-Vorschau
+*.md.html
