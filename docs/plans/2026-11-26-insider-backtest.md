@@ -92,13 +92,27 @@ hat keine eigenen Stellschrauben.
 
 ### Zeitraum
 
-- **2006 bis 2026 Q3 in einem Lauf.** Es wird nichts ausgewählt, deshalb braucht
-  es keinen gesperrten Teil.
-- Der Bericht zeigt zusätzlich die beiden Hälften 2006–2017 und 2018 bis
-  2026 Q3 getrennt. Das dient nur der Beschreibung: Hält das Ergebnis in beiden
-  Phasen, oder trägt eine allein?
+Ein Lauf, zwei Abschnitte. Es wird nichts ausgewählt, deshalb braucht es keinen
+gesperrten Teil. Maßgeblich für die Zuordnung ist der Signaltag.
 
-### Erfolgskriterium (konservativ, ganzer Zeitraum)
+| Abschnitt | Zeitraum | Regeln | Zählt fürs Urteil |
+|---|---|---|---|
+| **Stresstest Finanzkrise** | 1.1.2006 bis 30.6.2011 | alle Insider-Regeln, **ohne Börsenwert-Grenze** | nein |
+| **Urteil** | 1.7.2011 bis 30.9.2026 | das vollständige Regelwerk | ja |
+
+**Warum getrennt:** Die SEC liefert die Aktienzahl in auswertbarer Form (XBRL)
+erst ab 2010 für große und ab Mitte 2011 für kleine Firmen. Davor lässt sich
+der Börsenwert nicht bestimmen. Der Stresstest zeigt trotzdem, wie sich
+Insider-Käufe in der Finanzkrise und der Erholung danach verhalten. Pleitefirmen
+bleiben dabei drin, für sie gilt die Stufe mit −55 %. Ohne Grenze sind aber
+auch größere Firmen enthalten. Der Abschnitt misst also Insider-Käufe allgemein
+in der Krise, nicht exakt die Small-Cap-Strategie. Das steht so im Bericht.
+
+Der Urteilsabschnitt wird zusätzlich in zwei Hälften gezeigt (Mitte 2011 bis
+2018 und 2019 bis 2026 Q3). Das dient nur der Beschreibung: Hält das Ergebnis
+in beiden Phasen, oder trägt eine allein?
+
+### Erfolgskriterium (konservativ, Urteilsabschnitt)
 
 - **Bestanden**, wenn beides gilt:
   1. Das Portfolio liegt im Mittel mindestens 5 Prozentpunkte je 6-Monats-Fenster
@@ -210,8 +224,9 @@ fehlschlägt, dann die kleinste Umsetzung, dann aufräumen.
       S-4 und 425 zählen nicht, die reicht oft der Käufer ein.
 - [ ] Aktienzahl gilt vor späteren Splits: Börsenwert mit dem damaligen,
       nicht split-bereinigten Kurs rechnen (Schritt 4).
-- [ ] **Offen:** XBRL-Aktienzahlen gibt es erst ab 2010 (große) bzw. Mitte 2011
-      (kleine Firmen). Davor ist der Börsenwert unbekannt.
+- [x] XBRL-Aktienzahlen gibt es erst ab 2010 (große) bzw. Mitte 2011 (kleine
+      Firmen). Entschieden: 2006 bis Mitte 2011 läuft als Stresstest ohne
+      Börsenwert-Grenze und zählt nicht fürs Urteil (siehe „Zeitraum“).
 
 ### 4. Tageskurse
 
@@ -230,8 +245,8 @@ fehlschlägt, dann die kleinste Umsetzung, dann aufräumen.
 Schritte 5–9 beginnen erst, wenn dieser Check bestanden ist. Er braucht das
 Regelwerk noch nicht.
 
-- [ ] Insider-Grundregeln für **2008** (Finanzkrise, härtester Fall) und
-      **2015** (ruhiges Jahr).
+- [ ] Insider-Grundregeln für **2008** (Finanzkrise, härtester Fall, aus dem
+      Stresstest) und **2015** (ruhiges Jahr, aus dem Urteilsabschnitt).
 - [ ] Gemessen wird nur die Datenqualität, **keine Renditen**:
   - Signale pro Woche und pro Jahr;
   - Anteil mit Kurs;
@@ -265,9 +280,12 @@ Mehr sollte die Annahme nicht bewegen, sonst entscheidet sie statt des Signals.
 - [ ] Vorsprung je Einzelsignal in drei Stufen, gegen den ETF aus dem Regelwerk
       (bis dahin IWM, IWC als Zweitwert).
 - [ ] Portfolio über `decide()` und `simulate()` mit den Regeln aus dem
-      Regelwerk, Lauf je Handelstag.
+      Regelwerk, Lauf je Handelstag. Im Stresstest ohne Börsenwert-Funktion
+      (`market_cap=None`), sonst unverändert.
 - [ ] 6-Monats-Fenster mit monatlichem Start: Mittelwert und Anteil der Fenster
-      vor dem ETF. Zusätzlich getrennt für die beiden Hälften.
+      vor dem ETF. Getrennt für Stresstest, Urteilsabschnitt und dessen
+      beide Hälften.
+- [ ] Test: Das Urteil nutzt keine Signale vor dem 1.7.2011.
 - [ ] Block-Bootstrap nach Kalendermonat für das 95-%-Intervall.
 - [ ] Rechnung mit doppelter Slippage.
 - [ ] Prüfung: Für einen kleinen Fall mit festen Kursen stimmen die Zahlen mit
@@ -290,7 +308,8 @@ Mehr sollte die Annahme nicht bewegen, sonst entscheidet sie statt des Signals.
   - geprüftes Regelwerk mit Fingerabdruck;
   - Urteil mit den Prüfwerten;
   - drei Stufen und Anteil ohne Kurs;
-  - beide Hälften getrennt;
+  - Stresstest Finanzkrise getrennt, mit dem Hinweis „ohne Börsenwert-Grenze“;
+  - beide Hälften des Urteilsabschnitts getrennt;
   - Empfindlichkeit bei doppelter Slippage;
   - alle Läufe;
   - bekannte Lücken: 10b5-1 vor 2023, heutiger SIC, Yahoo.
@@ -299,6 +318,8 @@ Mehr sollte die Annahme nicht bewegen, sonst entscheidet sie statt des Signals.
 
 - [ ] Liest nur `data/backtest.sqlite`, rechnet nichts selbst.
 - [ ] Regelwerk, Urteil, drei Stufen, beide Hälften.
+- [ ] Stresstest Finanzkrise als eigener Abschnitt, deutlich als
+      „zählt nicht fürs Urteil, ohne Börsenwert-Grenze“ gekennzeichnet.
 - [ ] Vorsprung je 6-Monats-Fenster als Diagramm.
 - [ ] Einzelsignale mit Quellenlink und Status.
 - [ ] Liste aller Läufe mit Begründung.
