@@ -155,6 +155,9 @@ Bereichen. Wer wofür zuständig ist, steht auch in `.github/CODEOWNERS`.
 
 Social Media bekommt niemand, bis der Datenzugang geklärt ist (siehe Konzept).
 
+Zwischenstand von A (Beschlüsse und offene Fragen zu Testlauf, Datenmodell und
+Betrieb): [BEREICH-A.md](BEREICH-A.md).
+
 ### Regeln
 
 1. **`core/` ändert nur A**, vor allem `models.py` und `storage.py`. Wer eine
