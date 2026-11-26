@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from datetime import date, timedelta
+from enum import Enum
 from pathlib import Path
 from typing import Protocol
 
@@ -36,6 +37,16 @@ EVENT_FORMS = frozenset({
     "DEFM14A", "DEFM14C", "PREM14A", "SC TO-T", "SC 14D9", "SC 13E3",  # Übernahme
 })
 BANKRUPTCY_ITEM = "1.03"  # 8-K Punkt 1.03: Insolvenz oder Zwangsverwaltung
+BANKRUPTCY_FORM = f"8-K {BANKRUPTCY_ITEM}"
+TAKEOVER_FORMS = frozenset({"DEFM14A", "DEFM14C", "PREM14A", "SC TO-T", "SC 14D9", "SC 13E3"})
+
+
+class VanishReason(Enum):
+    """Warum es für eine Aktie keine Kurse mehr gibt (für die drei Stufen im Backtest)."""
+
+    TAKEOVER = "Übernahme"
+    BANKRUPTCY = "Pleite"
+    UNKNOWN = "unbekannt"
 
 
 class Client(Protocol):
@@ -79,6 +90,16 @@ class CompanyInfo:
                     return best.shares
         return None
 
+    def vanish_reason(self, after: date) -> VanishReason:
+        """Grund nach den Meldungen nach `after`. Insolvenz hat Vorrang vor Übernahme,
+        denn auch wer nach der Pleite verkauft wird, war für Aktionäre pleite."""
+        later = {e.form for e in self.events if e.day > after}
+        if BANKRUPTCY_FORM in later:
+            return VanishReason.BANKRUPTCY
+        if later & TAKEOVER_FORMS:
+            return VanishReason.TAKEOVER
+        return VanishReason.UNKNOWN
+
 
 def company_from_json(
     submissions: dict, facts: dict | None, older: list[dict]
@@ -91,7 +112,7 @@ def company_from_json(
             if form in EVENT_FORMS:
                 events.add(Event(date.fromisoformat(day), form))
             elif form == "8-K" and BANKRUPTCY_ITEM in (item or "").split(","):
-                events.add(Event(date.fromisoformat(day), f"8-K {BANKRUPTCY_ITEM}"))
+                events.add(Event(date.fromisoformat(day), BANKRUPTCY_FORM))
     return CompanyInfo(
         cik=f"{int(submissions['cik']):010d}",
         sic=str(submissions.get("sic") or "").strip() or None,

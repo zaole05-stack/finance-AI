@@ -230,15 +230,21 @@ fehlschlägt, dann die kleinste Umsetzung, dann aufräumen.
 
 ### 4. Tageskurse
 
-- [ ] Yahoo-Tageskurse je Ticker einmal laden und speichern. Die Quelle kann als
-      Erstes ausfallen, deshalb Wartezeit und Wiederholung einbauen.
-- [ ] `PriceSource` mit zwei Kursen je Handelstag: Eröffnung (09:30 New York)
+- [x] Yahoo-Tageskurse je Ticker einmal laden und speichern, auch „nichts
+      gefunden“. Wartezeit und Wiederholung bei Fehlern.
+- [x] `PriceSource` mit zwei Kursen je Handelstag: Eröffnung (09:30 New York)
       und Schluss (16:00). So arbeiten `decide()` und `simulate()` unverändert.
-- [ ] Split-Historie laden, um den damaligen Kurs für die Kürzel-Prüfung
-      zurückzurechnen.
-- [ ] Rückgriff auf das heutige Kürzel über `company_tickers.json`.
-- [ ] Grund für fehlende Kurse bestimmen: Übernahme oder Pleite/unbekannt, aus
-      der Liste der SEC-Meldungen der Firma.
+- [x] Split-Faktoren aus den Yahoo-Daten, `raw_close` rechnet den damaligen
+      Kurs zurück (geprüft an AAPL, 4:1-Split 2020).
+- [x] Rückgriff auf die heutigen Kürzel der Firma. Sie kommen aus den
+      SEC-Stammdaten (`submissions`), `company_tickers.json` ist nicht nötig.
+- [x] Grund für fehlende Kurse aus den SEC-Meldungen: Übernahme, Pleite oder
+      unbekannt. Insolvenz hat Vorrang.
+- [ ] **Offen (Befund aus echten Daten):** Yahoo führt unter DBD nur die neuen
+      Aktien ab August 2023. Ein Diebold-Kauf von 2015 hat deshalb keinen
+      Kurs und würde wegen der Insolvenz 2023 mit −55 % zählen, obwohl die
+      Position 2015 nach 91 Tagen verkauft war. Der Grund darf nur zählen,
+      wenn die Aktie **während der Haltedauer** verschwand.
 
 ### 4b. Datencheck: weiter oder nicht
 
