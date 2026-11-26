@@ -200,10 +200,18 @@ fehlschlägt, dann die kleinste Umsetzung, dann aufräumen.
 
 ### 3. Firmendaten
 
-- [ ] SIC je CIK aus der Firmenübersicht der SEC, zwischengespeichert.
-- [ ] Aktienzahl-Historie aus companyfacts. `shares_at(cik, day)` nimmt den
-      letzten Wert, der vor `day` eingereicht wurde. Ohne Wert: `None`, dann
-      „Börsenwert unbekannt“ wie live.
+- [x] SIC je CIK aus der Firmenübersicht der SEC, zwischengespeichert.
+- [x] Aktienzahl-Historie aus companyfacts. `shares_at(day)` nimmt die Angabe
+      mit dem jüngsten Stichtag aus Berichten, die vor `day` eingereicht wurden,
+      Deckblatt (dei) vor Bilanz (us-gaap). Älter als 400 Tage oder ohne Wert:
+      `None`, dann „Börsenwert unbekannt“ wie live.
+- [x] Ereignisse je Firma für Schritt 4: Delisting (25, 25-NSE, 15-…),
+      Übernahme (DEFM14A, SC TO-T, SC 14D9 …), Insolvenz (8-K Punkt 1.03).
+      S-4 und 425 zählen nicht, die reicht oft der Käufer ein.
+- [ ] Aktienzahl gilt vor späteren Splits: Börsenwert mit dem damaligen,
+      nicht split-bereinigten Kurs rechnen (Schritt 4).
+- [ ] **Offen:** XBRL-Aktienzahlen gibt es erst ab 2010 (große) bzw. Mitte 2011
+      (kleine Firmen). Davor ist der Börsenwert unbekannt.
 
 ### 4. Tageskurse
 
