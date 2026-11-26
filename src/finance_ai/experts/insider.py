@@ -25,6 +25,10 @@ am besten informiert ist (Seyhun 1986, Journal of Financial Economics). Die
 Werte sind gesetzt, nicht geschätzt. Die Schattenbewertung soll sie später
 bestätigen oder verwerfen.
 
+Zwei Wege zu den Meldungen: `scan_recent` liest den Atom-Feed und liefert
+Signale Minuten nach der Meldung. `scan_day` liest den Tagesindex und holt
+ganze vergangene Tage nach.
+
 Noch nicht umgesetzt: Erkennung routinemäßiger Käufer nach Cohen et al.
 (braucht mehrere Jahre Historie je Person). Der Filter auf kleine Firmen
 sitzt im Entscheidungs-Agenten, weil er einen aktuellen Börsenwert braucht.
@@ -39,7 +43,13 @@ from decimal import Decimal
 
 from finance_ai.core.models import Side, Signal
 from finance_ai.data.form4 import Form4, parse_form4
-from finance_ai.data.sec_edgar import EdgarClient, Filing, fetch_filing, form4_filings
+from finance_ai.data.sec_edgar import (
+    EdgarClient,
+    Filing,
+    fetch_filing,
+    form4_filings,
+    recent_form4_filings,
+)
 
 EXPERT = "insider"
 DEFAULT_MIN_VALUE = Decimal("25000")
@@ -107,6 +117,22 @@ def scan_day(
 ) -> list[Signal]:
     """Prüft alle Form-4-Meldungen eines Tages. Bei ~600 Meldungen dauert das gut eine Minute."""
     return list(_scan(client, form4_filings(client, day), min_value, clock))
+
+
+def scan_recent(
+    client: EdgarClient,
+    since: datetime,
+    min_value: Decimal = DEFAULT_MIN_VALUE,
+    clock: Clock = _now,
+) -> list[Signal]:
+    """Prüft die Form-4-Meldungen seit `since` aus dem Atom-Feed der SEC.
+
+    Für regelmäßige Abrufe im Abstand von Minuten. Signale kommen so wenige
+    Minuten nach der Meldung statt erst am nächsten Tag. Überschneidende
+    Zeiträume sind unschädlich, weil gespeicherte Signale nicht doppelt
+    angelegt werden. Lücken über mehr als einen Geschäftstag holt `scan_day` nach.
+    """
+    return list(_scan(client, recent_form4_filings(client, since), min_value, clock))
 
 
 def _scan(client, refs, min_value, clock) -> Iterable[Signal]:
