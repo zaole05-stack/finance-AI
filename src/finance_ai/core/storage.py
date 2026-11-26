@@ -6,6 +6,7 @@ Rundung zurückkommt. Zeitpunkte werden in UTC als ISO-8601 gespeichert.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from collections.abc import Iterable
 from datetime import UTC, datetime
@@ -174,7 +175,15 @@ BEGIN
 END;
 """
 
-MIGRATIONS: tuple[str, ...] = (_SCHEMA_V1, _TEST_RUNS_V2)
+# Tags an Signalen und Tag-Filter für Portfolios (Beschlüsse 12 und 17).
+# Bestehende Signale haben keine Tags, bestehende Portfolios keinen Tag-Filter.
+_TAGS_V3 = """
+ALTER TABLE signals ADD COLUMN tags TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE run_portfolios ADD COLUMN include_tags TEXT;
+ALTER TABLE run_portfolios ADD COLUMN exclude_tags TEXT NOT NULL DEFAULT '[]';
+"""
+
+MIGRATIONS: tuple[str, ...] = (_SCHEMA_V1, _TEST_RUNS_V2, _TAGS_V3)
 
 
 class SchemaTooNewError(RuntimeError):
@@ -242,7 +251,7 @@ def _has_tables(conn: sqlite3.Connection) -> bool:
 
 def save_signal(conn: sqlite3.Connection, signal: Signal) -> None:
     with conn:
-        conn.execute("INSERT INTO signals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", _signal_row(signal))
+        conn.execute(f"INSERT INTO signals {_SIGNAL_COLUMNS}", _signal_row(signal))
 
 
 def save_new_signals(conn: sqlite3.Connection, signals: Iterable[Signal]) -> int:
@@ -254,10 +263,16 @@ def save_new_signals(conn: sqlite3.Connection, signals: Iterable[Signal]) -> int
     with conn:
         before = conn.total_changes
         conn.executemany(
-            "INSERT OR IGNORE INTO signals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            f"INSERT OR IGNORE INTO signals {_SIGNAL_COLUMNS}",
             [_signal_row(signal) for signal in signals],
         )
         return conn.total_changes - before
+
+
+_SIGNAL_COLUMNS = (
+    "(id, expert, ticker, side, source_url, summary, observed_at, created_at, confidence, tags) "
+    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+)
 
 
 def _signal_row(signal: Signal) -> tuple:
@@ -271,6 +286,7 @@ def _signal_row(signal: Signal) -> tuple:
         to_db_time(signal.observed_at),
         to_db_time(signal.created_at),
         signal.confidence,
+        json.dumps(sorted(signal.tags)),
     )
 
 
@@ -472,6 +488,7 @@ def _signal_from_row(row: sqlite3.Row) -> Signal:
         created_at=from_db_time(row["created_at"]),
         confidence=row["confidence"],
         id=row["id"],
+        tags=frozenset(json.loads(row["tags"])),
     )
 
 

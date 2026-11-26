@@ -20,7 +20,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from datetime import datetime
 
-from finance_ai.core.models import MAIN_PORTFOLIO, shadow_portfolio
+from finance_ai.core.models import MAIN_PORTFOLIO, ROUTINE, Signal, require_tags, shadow_portfolio
 from finance_ai.core.settings import Settings, settings_from_json, settings_to_json
 from finance_ai.core.storage import from_db_time, to_db_time
 
@@ -32,13 +32,23 @@ _KEY = re.compile(r"[a-z0-9][a-z0-9:_-]*")
 class PortfolioSpec:
     """Ein Portfolio im Testlauf und welche Signale es bekommt.
 
-    `experts` None heißt: Signale aller Experten. `counts_for_verdict` False
-    heißt: nur Beobachtung, zählt nicht für das Urteil über die Strategie.
+    `experts` None heißt: Signale aller Experten. Signale anderer Experten
+    sieht das Portfolio gar nicht.
+
+    Die Tag-Filter wirken anders: Ein Signal, das am Filter scheitert, wird
+    mit Grund abgelehnt und gespeichert. So bleibt sichtbar, was das Portfolio
+    ausgeschlossen hat (Beschluss 16). `include_tags` None heißt: kein
+    Pflicht-Tag. Sonst braucht das Signal mindestens einen davon.
+
+    `counts_for_verdict` False heißt: nur Beobachtung, zählt nicht für das
+    Urteil über die Strategie.
     """
 
     key: str
     experts: frozenset[str] | None = None
     counts_for_verdict: bool = True
+    include_tags: frozenset[str] | None = None
+    exclude_tags: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         if not _KEY.fullmatch(self.key):
@@ -47,6 +57,22 @@ class PortfolioSpec:
             object.__setattr__(self, "experts", frozenset(self.experts))
             if not self.experts:
                 raise ValueError("experts leer: None für alle Experten verwenden")
+        object.__setattr__(self, "exclude_tags", require_tags(self.exclude_tags))
+        if self.include_tags is not None:
+            object.__setattr__(self, "include_tags", require_tags(self.include_tags))
+            if not self.include_tags:
+                raise ValueError("include_tags leer: None für keinen Pflicht-Tag verwenden")
+            if self.include_tags & self.exclude_tags:
+                raise ValueError("Ein Tag ist zugleich verlangt und ausgeschlossen")
+
+    def tag_rejection(self, signal: Signal) -> str | None:
+        """Grund, warum das Signal am Tag-Filter scheitert, oder None."""
+        excluded = signal.tags & self.exclude_tags
+        if excluded:
+            return f"Tag-Filter: {', '.join(sorted(excluded))} ausgeschlossen"
+        if self.include_tags is not None and not signal.tags & self.include_tags:
+            return f"Tag-Filter: braucht {' oder '.join(sorted(self.include_tags))}"
+        return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,11 +114,33 @@ def portfolio_name(run_id: str, key: str) -> str:
     return f"{run_id}/{key}"
 
 
+ROUTINE_CONTROL = "kontrolle:routine"
+
+
 def default_portfolios(experts: Iterable[str]) -> tuple[PortfolioSpec, ...]:
-    """Haupt-Portfolio über alle Experten plus ein Schattenportfolio je Experte."""
-    return (PortfolioSpec(MAIN_PORTFOLIO),) + tuple(
-        PortfolioSpec(shadow_portfolio(e), experts=frozenset({e})) for e in sorted(set(experts))
-    )
+    """Portfolios nach Beschluss 17.
+
+    Haupt-Portfolio über alle Experten und ein Schattenportfolio je Experte,
+    jeweils ohne Routinekäufe. Ist der Insider-Experte dabei, kommt ein
+    Kontroll-Portfolio nur mit Routinekäufen dazu, das nur beobachtet.
+    """
+    names = sorted(set(experts))
+    no_routine = frozenset({ROUTINE})
+    specs = [PortfolioSpec(MAIN_PORTFOLIO, exclude_tags=no_routine)]
+    specs += [
+        PortfolioSpec(shadow_portfolio(e), experts=frozenset({e}), exclude_tags=no_routine)
+        for e in names
+    ]
+    if "insider" in names:
+        specs.append(
+            PortfolioSpec(
+                ROUTINE_CONTROL,
+                experts=frozenset({"insider"}),
+                counts_for_verdict=False,
+                include_tags=no_routine,
+            )
+        )
+    return tuple(specs)
 
 
 def create_test_run(
@@ -123,7 +171,8 @@ def create_test_run(
             (run.id, run.name, run.owner, to_db_time(run.started_at), settings_to_json(run.settings)),
         )
         conn.executemany(
-            "INSERT INTO run_portfolios VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO run_portfolios (portfolio, run_id, key, experts, counts_for_verdict, "
+            "position, include_tags, exclude_tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 (
                     run.portfolio(spec),
@@ -132,6 +181,8 @@ def create_test_run(
                     json.dumps(sorted(spec.experts)) if spec.experts is not None else None,
                     int(spec.counts_for_verdict),
                     position,
+                    _tags_json(spec.include_tags),
+                    _tags_json(spec.exclude_tags),
                 )
                 for position, spec in enumerate(run.portfolios)
             ],
@@ -166,7 +217,8 @@ def end_test_run(conn: sqlite3.Connection, run_id: str, at: datetime) -> TestRun
 
 def _run_from_row(conn: sqlite3.Connection, row: sqlite3.Row) -> TestRun:
     specs = conn.execute(
-        "SELECT key, experts, counts_for_verdict FROM run_portfolios WHERE run_id = ? ORDER BY position",
+        "SELECT key, experts, counts_for_verdict, include_tags, exclude_tags FROM run_portfolios "
+        "WHERE run_id = ? ORDER BY position",
         (row["id"],),
     )
     return TestRun(
@@ -180,8 +232,18 @@ def _run_from_row(conn: sqlite3.Connection, row: sqlite3.Row) -> TestRun:
                 key=spec["key"],
                 experts=frozenset(json.loads(spec["experts"])) if spec["experts"] is not None else None,
                 counts_for_verdict=bool(spec["counts_for_verdict"]),
+                include_tags=_tags_from_json(spec["include_tags"]),
+                exclude_tags=_tags_from_json(spec["exclude_tags"]) or frozenset(),
             )
             for spec in specs
         ),
         ended_at=from_db_time(row["ended_at"]) if row["ended_at"] else None,
     )
+
+
+def _tags_json(tags: frozenset[str] | None) -> str | None:
+    return None if tags is None else json.dumps(sorted(tags))
+
+
+def _tags_from_json(text: str | None) -> frozenset[str] | None:
+    return None if text is None else frozenset(json.loads(text))

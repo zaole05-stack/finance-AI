@@ -16,6 +16,27 @@ from urllib.parse import urlparse
 
 MAIN_PORTFOLIO = "main"
 
+# Erlaubte Tags an Signalen (docs/BEREICH-A.md, Beschlüsse 12 und 15). Ein
+# unbekannter Tag ist ein Fehler. Neue Tags kommen nur hier hinzu.
+TOP_EXECUTIVE = "top_executive"
+ROUTINE = "routine"
+OPPORTUNISTIC = "opportunistic"
+UNCLASSIFIED = "unclassified"
+# Muster des Käufers nach Cohen, Malloy & Pomorski (2012). Höchstens einer je Signal.
+TRADE_PATTERN_TAGS = frozenset({ROUTINE, OPPORTUNISTIC, UNCLASSIFIED})
+TAGS = frozenset({TOP_EXECUTIVE}) | TRADE_PATTERN_TAGS
+
+
+def require_tags(tags) -> frozenset[str]:
+    """Prüft Tags gegen die erlaubte Liste und gibt sie als frozenset zurück."""
+    if isinstance(tags, str):
+        raise TypeError("tags muss eine Menge sein, kein einzelner Text")
+    result = frozenset(tags)
+    unknown = result - TAGS
+    if unknown:
+        raise ValueError(f"Unbekannte Tags: {', '.join(sorted(unknown))}")
+    return result
+
 
 def shadow_portfolio(expert: str) -> str:
     """Name des Schatten-Portfolios, in dem ein Experte einzeln bewertet wird."""
@@ -45,9 +66,13 @@ class Signal:
     created_at: datetime
     confidence: float = 0.5
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    tags: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "expert", _require_text("expert", self.expert))
+        object.__setattr__(self, "tags", require_tags(self.tags))
+        if len(self.tags & TRADE_PATTERN_TAGS) > 1:
+            raise ValueError("Höchstens ein Tag aus routine, opportunistic, unclassified")
         object.__setattr__(self, "ticker", _normalize_ticker(self.ticker))
         object.__setattr__(self, "side", Side(self.side))
         object.__setattr__(self, "summary", _require_text("summary", self.summary))
