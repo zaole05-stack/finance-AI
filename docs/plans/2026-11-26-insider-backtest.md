@@ -259,7 +259,8 @@ fehlschlägt, dann die kleinste Umsetzung, dann aufräumen.
 ### 4b. Datencheck: weiter oder nicht
 
 Schritte 5–9 beginnen erst, wenn dieser Check bestanden ist. Er braucht das
-Regelwerk noch nicht.
+Regelwerk noch nicht. Anleitung zum Ausführen:
+[2026-11-26-datencheck-uebergabe.md](2026-11-26-datencheck-uebergabe.md).
 
 - [ ] Insider-Grundregeln für **2008** (Finanzkrise, härtester Fall, aus dem
       Stresstest) und **2015** (ruhiges Jahr, aus dem Urteilsabschnitt).
