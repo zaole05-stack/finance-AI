@@ -86,6 +86,10 @@ im Plan erst, wenn das Team zugestimmt hat. Bis dahin ist es ein Vorschlag von A
 16. **Routinekäufe lehnt der Entscheidungs-Agent ab**, nicht der Experte. Er
     speichert den Grund wie bei jedem abgelehnten Signal. So bleiben alle drei
     Gruppen für die Auswertung erhalten.
+    *Umsetzung:* als Tag-Filter am Portfolio (`exclude_tags`), nicht als
+    feste Regel in `DecisionRules`. Eine feste Regel würde auch das
+    Kontroll-Portfolio aus Beschluss 17 leer lassen. Am Filter gescheiterte
+    Signale werden mit Grund „Tag-Filter: …“ gespeichert.
 17. **Portfolios werden über Filter definiert** (Experten und Tags), als Teil
     des eingefrorenen Regelwerks eines Testlaufs. Jedes Portfolio ist entweder
     für das Urteil relevant oder dient nur der Beobachtung:

@@ -32,7 +32,7 @@ def legacy_db(path, signal):
     raw.executescript(LEGACY_SIGNALS)
     with raw:
         raw.execute(
-            "INSERT INTO signals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", storage._signal_row(signal)
+            "INSERT INTO signals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", storage._signal_row(signal)[:9]
         )
     raw.close()
 

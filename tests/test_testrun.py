@@ -43,7 +43,7 @@ def make_run(conn, portfolios=None, id="insider-91d", settings=SETTINGS):
 
 def test_run_roundtrip(conn):
     specs = default_portfolios(["politik", "insider"]) + (
-        PortfolioSpec("routine", experts=frozenset({"insider"}), counts_for_verdict=False),
+        PortfolioSpec("beobachtung", experts=frozenset({"insider"}), counts_for_verdict=False),
     )
     run = make_run(conn, specs)
 
@@ -51,7 +51,7 @@ def test_run_roundtrip(conn):
     assert loaded == run
     assert loaded.settings.test_start == START
     assert [s.key for s in loaded.portfolios] == [
-        "main", "shadow:insider", "shadow:politik", "routine"
+        "main", "shadow:insider", "shadow:politik", "kontrolle:routine", "beobachtung"
     ]
     assert loaded.portfolio(loaded.portfolios[1]) == "insider-91d/shadow:insider"
     assert list_test_runs(conn) == [run]
@@ -89,7 +89,8 @@ def test_portfolio_cannot_be_added_after_first_decision(conn):
     with pytest.raises(sqlite3.IntegrityError, match="schon Entscheidungen"):
         with conn:
             conn.execute(
-                "INSERT INTO run_portfolios VALUES ('insider-91d/neu', 'insider-91d', 'neu', NULL, 1, 9)"
+                "INSERT INTO run_portfolios (portfolio, run_id, key, counts_for_verdict, position) "
+                "VALUES ('insider-91d/neu', 'insider-91d', 'neu', 1, 9)"
             )
 
 
@@ -104,6 +105,7 @@ def test_portfolios_get_only_their_experts(conn):
         "insider-91d/main": ["insider:AAA:0", "politik:BBB:0"],
         "insider-91d/shadow:insider": ["insider:AAA:0"],
         "insider-91d/shadow:politik": ["politik:BBB:0"],
+        "insider-91d/kontrolle:routine": ["insider:AAA:0"],
     }
 
 

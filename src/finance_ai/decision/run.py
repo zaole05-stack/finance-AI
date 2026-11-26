@@ -8,12 +8,13 @@ So zeigt der Vergleich, ob die Kombination besser ist als jeder Experte allein.
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import replace
 from collections.abc import Iterable
 from datetime import datetime, timedelta
 
 from finance_ai.core import storage
-from finance_ai.core.models import MAIN_PORTFOLIO, shadow_portfolio
-from finance_ai.core.testrun import TestRun
+from finance_ai.core.models import MAIN_PORTFOLIO, ROUTINE, shadow_portfolio
+from finance_ai.core.testrun import PortfolioSpec, TestRun
 from finance_ai.decision.agent import (
     Decision,
     DecisionRules,
@@ -38,7 +39,12 @@ def run_decisions(
     Portfolios ohne Testlauf (`main`, `shadow:<experte>`). Für einen Testlauf
     `run_test_run` verwenden.
     """
-    portfolios = [(MAIN_PORTFOLIO, None)] + [(shadow_portfolio(e), {e}) for e in experts]
+    # Beschluss 16: Routinekäufe lehnt auch der Lauf ohne Testlauf ab.
+    no_routine = frozenset({ROUTINE})
+    portfolios = [(MAIN_PORTFOLIO, PortfolioSpec(MAIN_PORTFOLIO, exclude_tags=no_routine))]
+    for e in experts:
+        name = shadow_portfolio(e)
+        portfolios.append((name, PortfolioSpec(name, experts=frozenset({e}), exclude_tags=no_routine)))
     return _decide_all(conn, at, prices, portfolios, rules, market_cap, since=None)
 
 
@@ -58,7 +64,7 @@ def run_test_run(
         raise ValueError(f"Testlauf {run.id} ist beendet")
     if at < run.started_at:
         raise ValueError(f"Testlauf {run.id} beginnt erst {run.started_at.isoformat()}")
-    portfolios = [(run.portfolio(spec), spec.experts) for spec in run.portfolios]
+    portfolios = [(run.portfolio(spec), spec) for spec in run.portfolios]
     return _decide_all(
         conn, at, prices, portfolios, run.settings.rules, market_cap, since=run.started_at
     )
@@ -68,16 +74,25 @@ def _decide_all(
     conn: sqlite3.Connection,
     at: datetime,
     prices: PriceSource,
-    portfolios: Iterable[tuple[str, Iterable[str] | None]],
+    portfolios: Iterable[tuple[str, PortfolioSpec]],
     rules: DecisionRules,
     market_cap: MarketCapLookup | None,
     since: datetime | None,
 ) -> list[Decision]:
     decisions = []
-    for portfolio, experts in portfolios:
-        signals = storage.pending_signals(conn, portfolio, at, experts=experts, since=since)
+    for portfolio, spec in portfolios:
+        pending = storage.pending_signals(conn, portfolio, at, experts=spec.experts, since=since)
+        reasons = {s.id: spec.tag_rejection(s) for s in pending}
+        signals = [s for s in pending if reasons[s.id] is None]
         holdings = holdings_from_orders(storage.list_orders(conn, portfolio))
         decision = decide(portfolio, signals, holdings, at, prices, rules, market_cap)
+        filtered = [s for s in pending if reasons[s.id] is not None]
+        if filtered:
+            decision = replace(
+                decision,
+                outcomes=decision.outcomes + [(s.id, None, reasons[s.id]) for s in filtered],
+                signals=decision.signals | {s.id: s for s in filtered},
+            )
         storage.save_decision(conn, portfolio, at, decision.orders, decision.outcomes)
         decisions.append(decision)
     return decisions
