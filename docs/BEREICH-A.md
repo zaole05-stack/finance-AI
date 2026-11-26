@@ -58,6 +58,10 @@ im Plan erst, wenn das Team zugestimmt hat. Bis dahin ist es ein Vorschlag von A
     sind.
 11. **Die Bevorzugung der obersten Führung (CEO, CFO …) wird eine eigene Regel
     im Entscheidungs-Agenten** statt eines höheren `confidence`-Werts.
+    **Vorbehalt:** Cohen, Malloy & Pomorski (2012) finden die besten
+    Informationen bei *nicht leitenden* opportunistischen Insidern. Die Regel ist
+    damit nicht durch Studien gedeckt und wird nach dem Lesen der Volltexte
+    überprüft (siehe Offen, Punkt 1).
 12. **`Signal` bekommt `tags: frozenset[str]`.** Die erlaubten Tags legt A in
     `core/` fest, zum Beispiel `"top_executive"`. Ein unbekannter Tag löst
     beim Erzeugen des Signals einen Fehler aus. Später landen hier auch die
@@ -70,16 +74,41 @@ im Plan erst, wenn das Team zugestimmt hat. Bis dahin ist es ein Vorschlag von A
 Die Punkte sind nach Abhängigkeit geordnet: Was oben steht, entscheidet über
 das, was darunter steht.
 
-### 1. Haltedauer – nach dem Lesen beider Studien
+### 1. Haltedauer und Kriterien – nach dem Lesen beider Studien
 
-Die Studien im Plan messen unterschiedliche Zeiträume:
+Geprüft sind bisher nur die Abstracts und eine Zusammenfassung, nicht die
+Volltexte:
 
-- Cohen, Malloy & Pomorski (2012, *Journal of Finance*): Rendite im Folgemonat
-  nach Käufen opportunistischer Insider, also etwa 1 Monat.
-- Lakonishok & Lee (2001, *Review of Financial Studies*): Vorsprung über etwa
-  12 Monate, vor allem bei kleinen Firmen.
+- **Cohen, Malloy & Pomorski (2012)**, *Journal of Finance* 67(3),
+  DOI 10.1111/j.1540-6261.2012.01740.x
+  ([NBER w16454](https://www.nber.org/papers/w16454),
+  [Harvard Law Forum](https://corpgov.law.harvard.edu/2012/02/03/decoding-inside-information)):
+  - Routinekäufe sind über die Hälfte aller Insider-Trades und haben keine
+    Vorhersagekraft.
+  - Opportunistische Trades bringen 82 Basispunkte Überrendite pro Monat
+    (gewichtet nach Börsenwert), 180 Basispunkte bei gleicher Gewichtung.
+  - Am besten informiert sind lokale, nicht leitende opportunistische Insider.
+- **Lakonishok & Lee (2001)**, *Review of Financial Studies* 14(1), 79–111,
+  DOI 10.1093/rfs/14.1.79 ([NBER w6656](https://www.nber.org/papers/w6656)):
+  - Die Stichprobe umfasst NYSE, AMEX und Nasdaq von 1975 bis 1995.
+  - Die Vorhersagekraft kommt aus kleinen Firmen.
+  - Käufe sind aussagekräftiger als Verkäufe.
 
-Beide Paper lesen, dann festlegen. Davon hängen ab:
+**Nicht belegt:** Die Haltedauer bzw. der Renditezeitraum beider Studien und
+die genaue Definition von „Routine“. Frühere Angaben in diesem Dokument
+(„Folgemonat“, „etwa 12 Monate“) stammten nicht aus den Quellen. Die
+Volltexte über den Uni-Zugang lesen, dann festlegen.
+
+Aus den geprüften Teilen folgt schon jetzt:
+
+- Der **Filter gegen Routinekäufer** ist nach Cohen et al. der wichtigste
+  Filter. Er steht in PLAN.md noch unter „später“, weil er mehrere Jahre
+  Historie je Person braucht. Er gehört vor den Teststart.
+- **Kleine Firmen und nur Käufe** sind durch Lakonishok & Lee gedeckt und
+  bereits umgesetzt.
+- Die **CEO/CFO-Bevorzugung** ist nicht gedeckt (siehe Beschluss 11).
+
+Von der Haltedauer hängen ab:
 
 - **Anzahl Trades.** Käufe in 6 Monaten ≈ Plätze × (182 Tage / Haltedauer).
   Heute (10 Plätze, 91 Tage) sind es höchstens etwa 20 je Portfolio. Mit 20
@@ -162,8 +191,8 @@ eingefrorenen Regelwerk des Testlaufs und müssen daher vor dem Start feststehen
 
 ## Nächste Schritte für A
 
-1. Beide Studien lesen, Haltedauer festlegen (Punkt 1), danach Plätze und
-   Startkapital (Punkt 2).
+1. Beide Studien im Volltext lesen, Haltedauer, Routine-Definition und die
+   CEO/CFO-Regel festlegen (Punkt 1), danach Plätze und Startkapital (Punkt 2).
 2. Abstimmung mit B und C zu Notenschlüssel, Tags, Testläufen und
    Dashboard-Sperre.
 3. Umsetzung in dieser Reihenfolge: Migrationen und Backup → `Testlauf` im
