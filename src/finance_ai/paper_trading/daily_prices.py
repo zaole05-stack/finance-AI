@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 import sqlite3
 import time as clock
 from bisect import bisect_left, bisect_right
@@ -61,6 +62,38 @@ Fetcher = Callable[[str], list[DailyBar]]
 def yahoo_symbol(ticker: str) -> str:
     """Kürzel in Yahoo-Schreibweise: Aktiengattungen mit Bindestrich (BRK.B → BRK-B)."""
     return ticker.strip().upper().replace(".", "-").replace("/", "-")
+
+
+_EXCHANGE_PREFIX = re.compile(r"^(NYSE\s*MKT|NYSE|NASDAQ|NASD|AMEX|OTCBB|OTC)\s*:\s*")
+_OTC_SUFFIX = re.compile(r"[.:\-](OB|PK|OTC|OTCBB|QB|QX)$")
+_SYMBOL = re.compile(r"^[A-Z]{1,5}(-[A-Z])?$")
+
+
+def ticker_candidates(raw: str) -> list[str]:
+    """Yahoo-Kürzel aus dem gemeldeten Feld, in der gemeldeten Reihenfolge.
+
+    Die Meldungen sind uneinheitlich, besonders vor 2012: OTC-Zusätze
+    (PFLC.OB, SOSI:OB, SWWI.PK), mehrere Kürzel (ISCA, ISCB), Börsenpräfix
+    (NYSE: RPT), Klammern und Anführungszeichen, Namensreste (LEE ENT).
+    """
+    text = raw.strip().upper().translate(str.maketrans("", "", "\"'()"))
+    candidates: list[str] = []
+    for part in re.split(r"[,;]", text):
+        part = _OTC_SUFFIX.sub("", _EXCHANGE_PREFIX.sub("", part.strip()))
+        if not part:
+            continue
+        part = part.split()[0] if " " in part and "/" not in part else part
+        if "/" in part:
+            left, _, right = (p.strip() for p in part.partition("/"))
+            # TRX/B ist eine Aktiengattung, TRY/TRYB sind zwei Kürzel.
+            pieces = [f"{left}-{right}"] if len(right) == 1 else [left, right]
+        else:
+            pieces = [part]
+        for piece in pieces:
+            symbol = yahoo_symbol(_OTC_SUFFIX.sub("", piece))
+            if _SYMBOL.match(symbol) and symbol not in candidates:
+                candidates.append(symbol)
+    return candidates
 
 
 def bars_from_frame(frame) -> list[DailyBar]:
@@ -237,7 +270,9 @@ def check_price(
     ändern ihr Kürzel). Passt der damalige Kurs nicht zum gemeldeten
     Kaufpreis, gehört das Kürzel vermutlich einer anderen Firma.
     """
-    candidates = [ticker] + [t for t in (company.tickers if company else ()) if t != ticker]
+    reported = ticker_candidates(ticker)
+    current = [yahoo_symbol(t) for t in (company.tickers if company else ())]
+    candidates = reported + [t for t in current if t not in reported]
     had_prices = False
     for position, candidate in enumerate(candidates):
         if not store.ensure(candidate):
@@ -247,7 +282,7 @@ def check_price(
             continue
         had_prices = True
         if abs(raw - reported_price) <= tolerance * reported_price:
-            return PriceCheck(PriceStatus.OK, yahoo_symbol(candidate), position > 0)
+            return PriceCheck(PriceStatus.OK, candidate, position >= len(reported))
     return PriceCheck(PriceStatus.MISMATCH if had_prices else PriceStatus.MISSING, None)
 
 

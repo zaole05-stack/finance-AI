@@ -124,6 +124,44 @@ def test_yahoo_symbol(raw, yahoo):
     assert dp.yahoo_symbol(raw) == yahoo
 
 
+@pytest.mark.parametrize(
+    ("raw", "candidates"),
+    [
+        # Echte Schreibweisen aus den SEC-Datensätzen 2008
+        ("PFLC.OB", ["PFLC"]),
+        ("SOSI:OB", ["SOSI"]),
+        ("ACGI.OTC", ["ACGI"]),
+        ("SWWI.PK", ["SWWI"]),
+        ("ISCA, ISCB", ["ISCA", "ISCB"]),
+        ("LEN,LEN.B", ["LEN", "LEN-B"]),
+        ("(PULB)", ["PULB"]),
+        ('"CKH"', ["CKH"]),
+        ("NYSE: RPT", ["RPT"]),
+        ("TRY/TRYB", ["TRY", "TRYB"]),
+        ("TRX/B", ["TRX-B"]),
+        ("LEE ENT", ["LEE"]),
+        ("BRK.B", ["BRK-B"]),
+        (" dbd ", ["DBD"]),
+        ("IFUE-OB", ["IFUE"]),
+    ],
+)
+def test_ticker_candidates(raw, candidates):
+    assert dp.ticker_candidates(raw) == candidates
+
+
+def test_price_check_tries_all_reported_tickers(store):
+    prices, yahoo = store
+    check = dp.check_price(prices, "OLD, AAPL", company(()), date(2020, 8, 28), D("500"))
+    assert (check.status, check.ticker, check.via_current_ticker) == (dp.PriceStatus.OK, "AAPL", False)
+    assert yahoo.calls == ["OLD", "AAPL"]
+
+
+def test_price_check_strips_otc_suffix(store):
+    prices, yahoo = store
+    assert dp.check_price(prices, "AAPL.OB", company(()), date(2020, 8, 28), D("500")).status is dp.PriceStatus.OK
+    assert yahoo.calls == ["AAPL"]
+
+
 def company(tickers=("NEW",), events=()):
     return CompanyInfo("0000000001", "3578", tickers, (), tuple(events))
 
