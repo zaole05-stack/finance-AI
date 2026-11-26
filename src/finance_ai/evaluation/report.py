@@ -22,7 +22,7 @@ from enum import StrEnum
 
 from finance_ai.core.models import Order
 from finance_ai.paper_trading.costs import CostModel
-from finance_ai.paper_trading.engine import buy_and_hold, simulate
+from finance_ai.paper_trading.engine import buy_and_hold, has_quote, simulate
 from finance_ai.paper_trading.prices import PriceSource
 
 TEST_DURATION = timedelta(days=182)
@@ -48,6 +48,11 @@ class PortfolioReport:
     return_delayed: Decimal
     benchmark_return: Decimal
     verdict: Verdict
+    # Orders ohne Kurs bis zum Stichtag: noch offen, das Geld liegt bar.
+    pending_immediate: int = 0
+    pending_delayed: int = 0
+    # Der ETF hatte seit Teststart noch keinen Kurs, das Vergleichsdepot liegt bar.
+    benchmark_pending: bool = False
 
     @property
     def excess_delayed(self) -> Decimal:
@@ -69,17 +74,26 @@ def evaluate(
     costs: CostModel,
     duration: timedelta = TEST_DURATION,
 ) -> list[PortfolioReport]:
-    """Bericht je Portfolio, sortiert nach Name. Portfolios ohne Orders fehlen."""
+    """Bericht je Portfolio, sortiert nach Name. Portfolios ohne Orders fehlen.
+
+    Es zählen nur Kurse bis `at`. Orders, für die es bis dahin noch keinen
+    Kurs gibt (direkt nach der Entscheidung, nachts, am Wochenende), bleiben
+    offen. Dasselbe gilt für den ETF-Kauf zum Teststart.
+    """
     orders = [o for o in orders if o.created_at <= at]
     counts: dict[str, int] = {}
     for order in orders:
         counts[order.portfolio] = counts.get(order.portfolio, 0) + 1
-    benchmark = buy_and_hold(benchmark_ticker, start, prices, start_cash, costs)
-    benchmark_return = benchmark.total_return(at, prices)
+    benchmark_pending = not has_quote(prices, benchmark_ticker, start, at)
+    if benchmark_pending:
+        benchmark_return = Decimal(0)
+    else:
+        benchmark = buy_and_hold(benchmark_ticker, start, prices, start_cash, costs)
+        benchmark_return = benchmark.total_return(at, prices)
     finished = at - start >= duration
 
     reports = []
-    for portfolio, accounts in sorted(simulate(orders, prices, start_cash, costs).items()):
+    for portfolio, accounts in sorted(simulate(orders, prices, start_cash, costs, until=at).items()):
         immediate = accounts.immediate.total_return(at, prices)
         delayed = accounts.delayed.total_return(at, prices)
         reports.append(
@@ -92,6 +106,9 @@ def evaluate(
                 return_delayed=delayed,
                 benchmark_return=benchmark_return,
                 verdict=verdict(delayed, benchmark_return, finished),
+                pending_immediate=len(accounts.pending_immediate),
+                pending_delayed=len(accounts.pending_delayed),
+                benchmark_pending=benchmark_pending,
             )
         )
     return reports

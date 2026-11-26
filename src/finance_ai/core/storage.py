@@ -129,10 +129,10 @@ def get_signal(conn: sqlite3.Connection, signal_id: str) -> Signal | None:
 def list_signals(conn: sqlite3.Connection, expert: str | None = None) -> list[Signal]:
     """Alle Signale, optional nur eines Experten, nach Erzeugungszeit sortiert."""
     if expert is None:
-        rows = conn.execute("SELECT * FROM signals ORDER BY created_at, id")
+        rows = conn.execute("SELECT * FROM signals ORDER BY created_at, rowid")
     else:
         rows = conn.execute(
-            "SELECT * FROM signals WHERE expert = ? ORDER BY created_at, id", (expert,)
+            "SELECT * FROM signals WHERE expert = ? ORDER BY created_at, rowid", (expert,)
         )
     return [_signal_from_row(row) for row in rows]
 
@@ -170,10 +170,10 @@ def get_order(conn: sqlite3.Connection, order_id: str) -> Order | None:
 def list_orders(conn: sqlite3.Connection, portfolio: str | None = None) -> list[Order]:
     """Alle Orders, optional nur eines Portfolios, nach Erzeugungszeit sortiert."""
     if portfolio is None:
-        rows = conn.execute("SELECT * FROM orders ORDER BY created_at, id").fetchall()
+        rows = conn.execute("SELECT * FROM orders ORDER BY created_at, rowid").fetchall()
     else:
         rows = conn.execute(
-            "SELECT * FROM orders WHERE portfolio = ? ORDER BY created_at, id", (portfolio,)
+            "SELECT * FROM orders WHERE portfolio = ? ORDER BY created_at, rowid", (portfolio,)
         ).fetchall()
     return [_order_from_row(conn, row) for row in rows]
 
@@ -190,7 +190,7 @@ def pending_signals(
     if expert is not None:
         query += " AND expert = ?"
         params.append(expert)
-    rows = conn.execute(query + " ORDER BY created_at, id", params)
+    rows = conn.execute(query + " ORDER BY created_at, rowid", params)
     return [_signal_from_row(row) for row in rows]
 
 
