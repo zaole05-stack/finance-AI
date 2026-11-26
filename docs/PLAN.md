@@ -130,6 +130,45 @@ sobald das Budget feststeht.
 - [ ] 6 Monate Paper Trading im Dauerbetrieb
 - [ ] Auswertung nach der Entscheidungsregel aus dem Konzept
 
+## Zusammenarbeit
+
+Drei Personen, drei Bereiche. Jeder Experte liefert nur `Signal`-Objekte und
+kennt den Rest des Systems nicht. `Signal` ist damit der Vertrag zwischen den
+Bereichen. Wer wofür zuständig ist, steht auch in `.github/CODEOWNERS`.
+
+| Bereich | Person | Gehört dazu | Startaufgabe |
+|---|---|---|---|
+| **A – Betrieb, Datenmodell (M6)** | @zaole05-stack | `core/`, `decision/`, `config/`, Einstiegspunkt (CLI, Scheduler) | Ein Befehl für Scan → Entscheidung mit gespeicherten Regeln → Kursabruf. Nachlauf über 3–6 Monate EDGAR: Wie viele Insider-Signale pro Woche bleiben nach allen Filtern übrig? |
+| **B – Insider, Auswertung, Dashboard** | @Jumikage | `experts/insider.py`, `data/sec_edgar.py`, `data/form4.py`, `evaluation/`, `dashboard/` | Atom-Feed der SEC statt Tagesindex (Signal nach Minuten statt nach einem Tag). Signale pro Woche im Dashboard. Filter anhand des Nachlaufs von A prüfen. |
+| **C – Neue Experten (M5)** | @elouanhsg | `experts/funds.py`, `experts/politics.py`, `data/sec_13f.py`, `data/congress.py` | Fonds-Experte (13F), zuerst nur gegen Fixtures. Politik-Experte erst, wenn die Signalmenge aus A es rechtfertigt. |
+
+Social Media bekommt niemand, bis der Datenzugang geklärt ist (siehe Konzept).
+
+### Regeln
+
+1. **`core/` ändert nur A**, vor allem `models.py` und `storage.py`. Wer eine
+   Schema-Änderung braucht, meldet sie als Issue oder schickt einen kleinen
+   eigenen PR, den A prüft.
+2. **Ein neuer Experte berührt nur seine eigenen Dateien:**
+   `experts/<name>.py`, `data/<quelle>.py`, `tests/test_<name>.py`,
+   `tests/fixtures/<quelle>/`. Das Einhängen in den Lauf übernimmt A.
+3. **Ein Branch und ein PR pro Feature**, Review durch eine zweite Person.
+   Kein direkter Push auf `main` außer für Absprachen wie diese.
+4. **Prüfung für jeden Experten wie bei M2:** Eine echte vergangene Meldung als
+   Fixture ergibt genau das erwartete Signal. Tests mit Internetzugriff bekommen
+   `@pytest.mark.network`.
+5. **Offene Punkte aus dem Konzept** (ETF, Standardwerte, LLM-Budget)
+   entscheiden wir gemeinsam und halten sie in `KONZEPT.md` fest, nicht still im
+   Code.
+
+### Reihenfolge
+
+Zuerst laufen A und B, C baut parallel gegen Fixtures. Sobald die Zahl der
+Signale pro Woche aus dem Nachlauf von A vorliegt, entscheiden wir gemeinsam,
+ob M5 voll weiterläuft oder ob zuerst der Insider-Filter angepasst wird. Bei
+nur etwa 20 Trades in 6 Monaten je Portfolio ist sonst kein Experte belastbar
+messbar.
+
 ## Risiken
 
 - **Zu wenige Insider-Käufe bei kleinen Werten:** Dann gibt es zu wenige Trades

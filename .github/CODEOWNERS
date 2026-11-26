@@ -1,0 +1,29 @@
+# Zuständigkeiten, siehe docs/PLAN.md, Abschnitt "Zusammenarbeit".
+# Die zuständige Person wird bei PRs automatisch als Reviewer angefragt.
+# Später stehende Zeilen haben Vorrang.
+
+# Standard und A – Betrieb, Datenmodell (M6)
+*                                   @zaole05-stack
+/src/finance_ai/core/               @zaole05-stack
+/src/finance_ai/decision/           @zaole05-stack
+/config/                            @zaole05-stack
+
+# B – Insider, Auswertung, Dashboard
+/src/finance_ai/experts/insider.py  @Jumikage
+/src/finance_ai/data/sec_edgar.py   @Jumikage
+/src/finance_ai/data/form4.py       @Jumikage
+/src/finance_ai/evaluation/         @Jumikage
+/src/finance_ai/dashboard/          @Jumikage
+/tests/test_insider.py              @Jumikage
+/tests/test_dashboard.py            @Jumikage
+/tests/fixtures/edgar/              @Jumikage
+
+# C – Neue Experten (M5)
+/src/finance_ai/experts/funds.py    @elouanhsg
+/src/finance_ai/experts/politics.py @elouanhsg
+/src/finance_ai/data/sec_13f.py     @elouanhsg
+/src/finance_ai/data/congress.py    @elouanhsg
+/tests/test_funds.py                @elouanhsg
+/tests/test_politics.py             @elouanhsg
+/tests/fixtures/13f/                @elouanhsg
+/tests/fixtures/congress/           @elouanhsg
