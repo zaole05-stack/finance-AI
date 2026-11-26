@@ -49,6 +49,26 @@ class VanishReason(Enum):
     UNKNOWN = "unbekannt"
 
 
+class MissingPrice(Enum):
+    """Fall eines Signals ohne Kurs, für die drei Stufen im Backtest.
+
+    Ein Grund zählt nur, wenn die Aktie während der Haltedauer verschwand
+    (plus `VANISH_BUFFER`). Sonst war die Position längst verkauft, und es
+    fehlen nur die Kurse, etwa weil Yahoo nach einer späteren Insolvenz nur
+    die neuen Aktien führt (Diebold 2023).
+    """
+
+    TAKEOVER = "Übernahme in der Haltedauer"
+    BANKRUPTCY = "Pleite in der Haltedauer"
+    UNKNOWN = "in der Haltedauer verschwunden, Grund unbekannt"
+    AFTER_HOLDING = "erst nach der Haltedauer verschwunden"
+    NO_EVENT = "keine Meldung zum Verschwinden"
+
+
+# Delisting- und Abmeldeformulare gehen kurz vor oder nach dem letzten Handelstag ein.
+VANISH_BUFFER = timedelta(days=30)
+
+
 class Client(Protocol):
     def get(self, url: str) -> str | None: ...
 
@@ -99,6 +119,22 @@ class CompanyInfo:
         if later & TAKEOVER_FORMS:
             return VanishReason.TAKEOVER
         return VanishReason.UNKNOWN
+
+    def missing_price_case(
+        self, entry: date, exit: date, buffer: timedelta = VANISH_BUFFER
+    ) -> MissingPrice:
+        """Was mit einem Signal ohne Kurs geschah, gekauft am `entry`, verkauft am `exit`."""
+        end = exit + buffer
+        during = {e.form for e in self.events if entry < e.day <= end}
+        if BANKRUPTCY_FORM in during:
+            return MissingPrice.BANKRUPTCY
+        if during & TAKEOVER_FORMS:
+            return MissingPrice.TAKEOVER
+        if during:
+            return MissingPrice.UNKNOWN
+        if any(e.day > end for e in self.events):
+            return MissingPrice.AFTER_HOLDING
+        return MissingPrice.NO_EVENT
 
 
 def company_from_json(

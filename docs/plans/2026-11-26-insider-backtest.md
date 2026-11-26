@@ -62,16 +62,27 @@ hat keine eigenen Stellschrauben.
      `simulate()`, mit Plätzen und Startkapital aus dem Regelwerk.
 - **Kein Blick in die Zukunft:** Börsenwert und alle Insider-Kriterien nutzen
   nur Daten, die am Signaltag schon öffentlich waren.
-- **Fehlende Kurse:** Das Ergebnis wird immer in drei Stufen ausgewiesen.
+- **Fehlende Kurse:** Das Ergebnis wird immer in drei Stufen ausgewiesen. Der
+  Grund für das Verschwinden zählt nur, wenn die Aktie **während der
+  Haltedauer** verschwand (plus 30 Tage Puffer, weil Delisting-Meldungen kurz
+  vor oder nach dem letzten Handelstag eingehen). Sonst war die Position schon
+  verkauft, und es fehlen nur die Kurse. Beispiel aus echten Daten: Yahoo führt
+  unter DBD nur die neuen Aktien nach der Insolvenz 2023. Ein Kauf von 2015
+  hat deshalb keinen Kurs, obwohl er normal verlief.
 
-  | Stufe | Signale ohne Kurs zählen als | Zweck |
-  |---|---|---|
-  | Optimistisch | fallen weg | Obergrenze |
-  | **Vorsichtig-realistisch** | Übernahme: 0 %. Pleite oder Grund unbekannt: −55 %. | **entscheidet** |
-  | Schlimmster Fall | −100 % | Warnung, steht im Bericht ganz oben, wenn das Urteil dort kippt |
+  | Fall (`MissingPrice`) | Optimistisch | **Vorsichtig-realistisch (entscheidet)** | Schlimmster Fall |
+  |---|---|---|---|
+  | Übernahme in der Haltedauer | fällt weg | 0 % | −100 % |
+  | Pleite in der Haltedauer | fällt weg | −55 % | −100 % |
+  | In der Haltedauer verschwunden, Grund unbekannt | fällt weg | −55 % | −100 % |
+  | Erst nach der Haltedauer verschwunden | fällt weg | **fällt weg**, Ausgang unbekannt | −100 % |
+  | Keine Meldung zum Verschwinden | fällt weg | −55 % | −100 % |
 
-  Der Grund kommt aus den SEC-Meldungen der Firma: Fusionsunterlagen wie
-  DEFM14A oder SC TO-T vor dem Verschwinden gelten als Übernahme. Einen
+  Der schlimmste Fall ist eine Warnung und steht im Bericht ganz oben, wenn
+  das Urteil dort kippt. Der Anteil jedes Falls steht immer im Bericht.
+
+  Der Grund kommt aus den SEC-Meldungen der Firma: Insolvenz (8-K Punkt 1.03)
+  hat Vorrang vor Übernahme (DEFM14A, SC TO-T, SC 14D9 …). Einen
   Übernahmeaufschlag rechnen wir bewusst nicht ein. Der Wert −55 % beruht auf
   Shumway & Warther (1999, *Journal of Finance*), delistete Nasdaq-Werte. Er
   ist vor der Umsetzung in der Studie nachzuprüfen.
@@ -240,11 +251,10 @@ fehlschlägt, dann die kleinste Umsetzung, dann aufräumen.
       SEC-Stammdaten (`submissions`), `company_tickers.json` ist nicht nötig.
 - [x] Grund für fehlende Kurse aus den SEC-Meldungen: Übernahme, Pleite oder
       unbekannt. Insolvenz hat Vorrang.
-- [ ] **Offen (Befund aus echten Daten):** Yahoo führt unter DBD nur die neuen
-      Aktien ab August 2023. Ein Diebold-Kauf von 2015 hat deshalb keinen
-      Kurs und würde wegen der Insolvenz 2023 mit −55 % zählen, obwohl die
-      Position 2015 nach 91 Tagen verkauft war. Der Grund darf nur zählen,
-      wenn die Aktie **während der Haltedauer** verschwand.
+- [x] Befund aus echten Daten: Yahoo führt unter DBD nur die neuen Aktien ab
+      August 2023. Entschieden: Der Grund zählt nur, wenn die Aktie während
+      der Haltedauer verschwand (`CompanyInfo.missing_price_case`, Tabelle
+      unter „Methode“).
 
 ### 4b. Datencheck: weiter oder nicht
 
@@ -257,9 +267,10 @@ Regelwerk noch nicht.
   - Signale pro Woche und pro Jahr;
   - Anteil mit Kurs;
   - Anteil, der erst über das heutige Kürzel gefunden wird;
-  - Anteil ohne Kurs, aufgeteilt in Übernahme und Pleite/unbekannt.
-- [ ] Entscheidung nach dem Anteil Pleite/unbekannt im schlechteren der beiden
-      Jahre:
+  - Anteil ohne Kurs, aufgeteilt nach den fünf Fällen aus „Methode“.
+- [ ] Entscheidung nach dem Anteil, der in der mittleren Stufe mit −55 %
+      eingeht (Pleite, Grund unbekannt, keine Meldung), im schlechteren der
+      beiden Jahre:
 
 | Anteil | Folge |
 |---|---|

@@ -84,6 +84,46 @@ def test_company_without_xbrl_facts():
     assert info.sic == "3578"
 
 
+def test_diebold_2015_purchase_vanished_only_after_holding():
+    """Befund aus echten Daten: Yahoo führt DBD erst ab August 2023 (neue Aktien).
+    Ein Kauf von 2015 war nach 91 Tagen verkauft, lange vor der Insolvenz 2023."""
+    case = diebold().missing_price_case(date(2015, 6, 2), date(2015, 9, 1))
+    assert case is sc.MissingPrice.AFTER_HOLDING
+
+
+def test_diebold_purchase_before_bankruptcy():
+    # Insolvenzantrag (8-K 1.03) am 1.6.2023, mitten in der Haltedauer.
+    case = diebold().missing_price_case(date(2023, 4, 3), date(2023, 7, 3))
+    assert case is sc.MissingPrice.BANKRUPTCY
+
+
+def info_with(*events):
+    return sc.CompanyInfo("0000000001", None, (), (), tuple(sorted(events)))
+
+
+ENTRY, EXIT = date(2008, 6, 2), date(2008, 9, 1)
+
+
+@pytest.mark.parametrize(
+    ("events", "expected"),
+    [
+        ([sc.Event(date(2008, 7, 1), "DEFM14A")], sc.MissingPrice.TAKEOVER),
+        ([sc.Event(date(2008, 8, 1), "25-NSE")], sc.MissingPrice.UNKNOWN),
+        # Meldung kurz nach dem Verkauf: noch im Puffer von 30 Tagen
+        ([sc.Event(EXIT + timedelta(days=30), "15-12G")], sc.MissingPrice.UNKNOWN),
+        ([sc.Event(EXIT + timedelta(days=31), "15-12G")], sc.MissingPrice.AFTER_HOLDING),
+        # Insolvenz vor dem Kauf zählt nicht
+        ([sc.Event(date(2007, 1, 1), "8-K 1.03")], sc.MissingPrice.NO_EVENT),
+        ([], sc.MissingPrice.NO_EVENT),
+        # Pleite und Übernahme in der Haltedauer: Pleite hat Vorrang
+        ([sc.Event(date(2008, 7, 1), "DEFM14A"), sc.Event(date(2008, 8, 1), "8-K 1.03")],
+         sc.MissingPrice.BANKRUPTCY),
+    ],
+)
+def test_missing_price_cases(events, expected):
+    assert info_with(*events).missing_price_case(ENTRY, EXIT) is expected
+
+
 class FakeClient:
     def __init__(self, facts=True):
         self.urls = []
