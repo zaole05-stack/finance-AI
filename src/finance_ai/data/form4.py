@@ -66,11 +66,10 @@ def parse_form4(xml: str) -> Form4:
         raise ValueError(f"Ungültiges XML: {error}") from error
     if root.tag != "ownershipDocument":
         raise ValueError(f"Kein Form-4-Dokument: <{root.tag}>")
-    ticker = _text(root, "issuer/issuerTradingSymbol").upper()
     return Form4(
         issuer_cik=_text(root, "issuer/issuerCik"),
         issuer_name=_text(root, "issuer/issuerName"),
-        ticker=ticker if ticker and ticker not in {"NONE", "N/A", "NA"} else None,
+        ticker=clean_ticker(_text(root, "issuer/issuerTradingSymbol")),
         owners=tuple(_owner(node) for node in root.findall("reportingOwner")),
         transactions=tuple(
             tx
@@ -79,6 +78,12 @@ def parse_form4(xml: str) -> Form4:
         ),
         is_10b5_1_plan=_flag(root, "aff10b5One"),
     )
+
+
+def clean_ticker(raw: str) -> str | None:
+    """Börsenkürzel in Großbuchstaben, None für Platzhalter wie 'NONE' oder 'N/A'."""
+    ticker = raw.strip().upper()
+    return ticker if ticker and ticker not in {"NONE", "N/A", "NA"} else None
 
 
 def _owner(node: ET.Element) -> Owner:

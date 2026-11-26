@@ -75,8 +75,36 @@ def signal_from_filing(
 ) -> Signal | None:
     """Ein Kaufsignal, wenn die Meldung alle Regeln erfüllt, sonst None."""
     if filing.issuer_sic is None or filing.issuer_sic in EXCLUDED_SIC:
+        return None  # vor dem Parsen, das spart Zeit bei Fonds
+    return signal_from_form4(
+        parse_form4(filing.xml),
+        accession=filing.ref.accession,
+        source_url=filing.ref.index_url,
+        observed_at=filing.accepted_at,
+        issuer_sic=filing.issuer_sic,
+        created_at=created_at,
+        min_value=min_value,
+    )
+
+
+def signal_from_form4(
+    doc: Form4,
+    *,
+    accession: str,
+    source_url: str,
+    observed_at: datetime,
+    issuer_sic: str | None,
+    created_at: datetime,
+    min_value: Decimal = DEFAULT_MIN_VALUE,
+) -> Signal | None:
+    """Die Regeln des Insider-Experten auf eine gelesene Meldung.
+
+    Gilt für beide Wege: live (XML einer Einreichung) und im Backtest
+    (Zeilen der Quartals-Datensätze der SEC). So kann der Backtest nicht
+    still mit anderen Regeln rechnen als der Testlauf.
+    """
+    if issuer_sic is None or issuer_sic in EXCLUDED_SIC:
         return None
-    doc = parse_form4(filing.xml)
     insiders = [o for o in doc.owners if o.is_officer or o.is_director]
     if doc.ticker is None or doc.is_10b5_1_plan or not insiders:
         return None
@@ -88,14 +116,14 @@ def signal_from_filing(
     if value < min_value:
         return None
     return Signal(
-        id=f"{EXPERT}:{filing.ref.accession}",
+        id=f"{EXPERT}:{accession}",
         expert=EXPERT,
         ticker=doc.ticker,
         side=Side.BUY,
-        source_url=filing.ref.index_url,
+        source_url=source_url,
         summary=_summary(doc, insiders[0], shares, value, min(t.day for t in buys),
                          max(t.day for t in buys)),
-        observed_at=filing.accepted_at,
+        observed_at=observed_at,
         created_at=created_at,
         confidence=_confidence(insiders),
     )

@@ -111,6 +111,36 @@ def test_known_insider_purchase_gives_correct_signal():
     assert "2026-11-20" in signal.summary
 
 
+def form4_args(source, **changes):
+    """Angaben für signal_from_form4 aus einer Meldung, so wie sie der Backtest liefert."""
+    args = dict(
+        accession=source.ref.accession,
+        source_url=source.ref.index_url,
+        observed_at=source.accepted_at,
+        issuer_sic=source.issuer_sic,
+        created_at=LATER,
+    )
+    return {**args, **changes}
+
+
+def test_signal_from_form4_matches_filing_path():
+    """Backtest und Live-Betrieb ergeben aus derselben Meldung dasselbe Signal."""
+    for accession in (ALDX, CBK, LEE, NO_TICKER, DGICA):
+        source = filing(accession)
+        doc = parse_form4(source.xml)
+        assert insider.signal_from_form4(doc, **form4_args(source)) == (
+            insider.signal_from_filing(source, LATER)
+        ), accession
+
+
+def test_signal_from_form4_applies_rules_itself():
+    source = filing(ALDX)
+    doc = parse_form4(source.xml)
+    assert insider.signal_from_form4(doc, **form4_args(source, issuer_sic="6798")) is None
+    assert insider.signal_from_form4(doc, **form4_args(source, issuer_sic=None)) is None
+    assert insider.signal_from_form4(doc, **form4_args(source), min_value=D("300000")) is None
+
+
 @pytest.mark.parametrize(
     ("accession", "reason"),
     [
