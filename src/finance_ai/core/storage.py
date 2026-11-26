@@ -93,7 +93,88 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 """
 
-MIGRATIONS: tuple[str, ...] = (_SCHEMA_V1,)
+# Testläufe (core/testrun.py, docs/BEREICH-A.md Beschluss 3). Was ein Testlauf
+# festlegt, ist nach dem Anlegen eingefroren. Die Trigger setzen das in der
+# Datenbank durch, nicht nur im Python-Code.
+_TEST_RUNS_V2 = """
+CREATE TABLE test_runs (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    owner      TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    ended_at   TEXT,
+    settings   TEXT NOT NULL,
+    CHECK (ended_at IS NULL OR ended_at > started_at)
+);
+
+-- Ein Portfolio gehört zu genau einem Testlauf. experts NULL heißt alle Experten.
+CREATE TABLE run_portfolios (
+    portfolio          TEXT PRIMARY KEY,
+    run_id             TEXT NOT NULL REFERENCES test_runs (id),
+    key                TEXT NOT NULL,
+    experts            TEXT,
+    counts_for_verdict INTEGER NOT NULL CHECK (counts_for_verdict IN (0, 1)),
+    position           INTEGER NOT NULL,
+    UNIQUE (run_id, key)
+);
+
+CREATE TRIGGER test_runs_frozen BEFORE UPDATE OF id, name, owner, started_at, settings ON test_runs
+BEGIN
+    SELECT RAISE(ABORT, 'Testlauf ist eingefroren');
+END;
+
+CREATE TRIGGER test_runs_end_once BEFORE UPDATE OF ended_at ON test_runs
+WHEN OLD.ended_at IS NOT NULL
+BEGIN
+    SELECT RAISE(ABORT, 'Testlauf ist schon beendet');
+END;
+
+CREATE TRIGGER test_runs_end_after_decisions BEFORE UPDATE OF ended_at ON test_runs
+WHEN EXISTS (
+    SELECT 1 FROM decisions d JOIN run_portfolios p ON p.portfolio = d.portfolio
+    WHERE p.run_id = NEW.id AND d.decided_at >= NEW.ended_at
+)
+BEGIN
+    SELECT RAISE(ABORT, 'Ende liegt vor einer Entscheidung des Testlaufs');
+END;
+
+CREATE TRIGGER test_runs_no_delete BEFORE DELETE ON test_runs
+BEGIN
+    SELECT RAISE(ABORT, 'Testläufe werden nicht gelöscht');
+END;
+
+CREATE TRIGGER run_portfolios_frozen BEFORE UPDATE ON run_portfolios
+BEGIN
+    SELECT RAISE(ABORT, 'Portfolios eines Testlaufs sind eingefroren');
+END;
+
+CREATE TRIGGER run_portfolios_no_delete BEFORE DELETE ON run_portfolios
+BEGIN
+    SELECT RAISE(ABORT, 'Portfolios eines Testlaufs werden nicht gelöscht');
+END;
+
+CREATE TRIGGER run_portfolios_no_late_insert BEFORE INSERT ON run_portfolios
+WHEN EXISTS (
+    SELECT 1 FROM decisions d JOIN run_portfolios p ON p.portfolio = d.portfolio
+    WHERE p.run_id = NEW.run_id
+)
+BEGIN
+    SELECT RAISE(ABORT, 'Testlauf hat schon Entscheidungen');
+END;
+
+-- Entscheidungen eines Testlaufs nur zwischen Start und Ende.
+CREATE TRIGGER decisions_within_run BEFORE INSERT ON decisions
+WHEN EXISTS (
+    SELECT 1 FROM run_portfolios p JOIN test_runs r ON r.id = p.run_id
+    WHERE p.portfolio = NEW.portfolio
+      AND (NEW.decided_at < r.started_at OR (r.ended_at IS NOT NULL AND NEW.decided_at >= r.ended_at))
+)
+BEGIN
+    SELECT RAISE(ABORT, 'Entscheidung außerhalb des Testlaufs');
+END;
+"""
+
+MIGRATIONS: tuple[str, ...] = (_SCHEMA_V1, _TEST_RUNS_V2)
 
 
 class SchemaTooNewError(RuntimeError):
@@ -251,17 +332,37 @@ def list_orders(conn: sqlite3.Connection, portfolio: str | None = None) -> list[
 
 
 def pending_signals(
-    conn: sqlite3.Connection, portfolio: str, until: datetime, expert: str | None = None
+    conn: sqlite3.Connection,
+    portfolio: str,
+    until: datetime,
+    expert: str | None = None,
+    *,
+    experts: Iterable[str] | None = None,
+    since: datetime | None = None,
 ) -> list[Signal]:
-    """Signale bis `until`, über die für dieses Portfolio noch nicht entschieden wurde."""
+    """Signale bis `until`, über die für dieses Portfolio noch nicht entschieden wurde.
+
+    `expert` oder `experts` beschränken auf bestimmte Experten, `since` auf
+    Signale ab diesem Zeitpunkt (Beginn eines Testlaufs).
+    """
     query = (
         "SELECT * FROM signals WHERE created_at <= ? AND id NOT IN "
         "(SELECT signal_id FROM decisions WHERE portfolio = ?)"
     )
     params: list = [to_db_time(until), portfolio]
+    if expert is not None and experts is not None:
+        raise ValueError("expert oder experts angeben, nicht beides")
     if expert is not None:
-        query += " AND expert = ?"
-        params.append(expert)
+        experts = (expert,)
+    if experts is not None:
+        names = sorted(set(experts))
+        if not names:
+            return []
+        query += f" AND expert IN ({', '.join('?' * len(names))})"
+        params.extend(names)
+    if since is not None:
+        query += " AND created_at >= ?"
+        params.append(to_db_time(since))
     rows = conn.execute(query + " ORDER BY created_at, rowid", params)
     return [_signal_from_row(row) for row in rows]
 

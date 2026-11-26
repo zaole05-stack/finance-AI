@@ -41,9 +41,17 @@ class Settings:
 
 def load_settings(conn: sqlite3.Connection) -> Settings:
     row = conn.execute("SELECT value FROM settings WHERE key = ?", (_KEY,)).fetchone()
-    if row is None:
-        return Settings()
-    data = json.loads(row[0])
+    return Settings() if row is None else settings_from_json(row[0])
+
+
+def settings_from_json(text: str) -> Settings:
+    """Liest Einstellungen aus JSON. Fehlende Werte bekommen den Standard.
+
+    Achtung bei neuen Regeln: Eingefrorene Testläufe bekommen beim Laden
+    ebenfalls den Standard. Der Standard einer neuen Regel muss daher das
+    bisherige Verhalten ergeben.
+    """
+    data = json.loads(text)
     defaults = Settings()
     rules = data.get("rules", {})
     costs = data.get("costs", {})
@@ -65,6 +73,15 @@ def load_settings(conn: sqlite3.Connection) -> Settings:
 
 
 def save_settings(conn: sqlite3.Connection, settings: Settings) -> None:
+    with conn:
+        conn.execute(
+            "INSERT INTO settings VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            (_KEY, settings_to_json(settings)),
+        )
+
+
+def settings_to_json(settings: Settings) -> str:
+    """Schreibt alle Werte ausdrücklich, auch die, die dem Standard entsprechen."""
     rules, costs = settings.rules, settings.costs
     data = {
         "benchmark_ticker": settings.benchmark_ticker,
@@ -82,8 +99,4 @@ def save_settings(conn: sqlite3.Connection, settings: Settings) -> None:
             for name in ("fee_fixed", "fee_rate", "slippage_rate", "tax_rate")
         },
     }
-    with conn:
-        conn.execute(
-            "INSERT INTO settings VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
-            (_KEY, json.dumps(data)),
-        )
+    return json.dumps(data, sort_keys=True)
