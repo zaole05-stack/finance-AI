@@ -183,7 +183,28 @@ ALTER TABLE run_portfolios ADD COLUMN include_tags TEXT;
 ALTER TABLE run_portfolios ADD COLUMN exclude_tags TEXT NOT NULL DEFAULT '[]';
 """
 
-MIGRATIONS: tuple[str, ...] = (_SCHEMA_V1, _TEST_RUNS_V2, _TAGS_V3)
+# Historie aller Insider-Trades für den Routine-Filter (core/insider_history.py,
+# Beschlüsse 13 bis 15). Daten in derselben Form wie die übrigen Tabellen:
+# Beträge als Text (Decimal), Zeitpunkte in UTC.
+_INSIDER_TRADES_V4 = """
+CREATE TABLE insider_trades (
+    accession  TEXT NOT NULL,
+    line       INTEGER NOT NULL,
+    owner_cik  TEXT NOT NULL,
+    issuer_cik TEXT NOT NULL,
+    ticker     TEXT,
+    code       TEXT NOT NULL,
+    acquired   INTEGER NOT NULL CHECK (acquired IN (0, 1)),
+    shares     TEXT NOT NULL,
+    price      TEXT NOT NULL,
+    trade_date TEXT NOT NULL,
+    filed_at   TEXT NOT NULL,
+    PRIMARY KEY (accession, owner_cik, line)
+);
+CREATE INDEX insider_trades_owner ON insider_trades (owner_cik, filed_at);
+"""
+
+MIGRATIONS: tuple[str, ...] = (_SCHEMA_V1, _TEST_RUNS_V2, _TAGS_V3, _INSIDER_TRADES_V4)
 
 
 class SchemaTooNewError(RuntimeError):
