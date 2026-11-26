@@ -69,6 +69,35 @@ im Plan erst, wenn das Team zugestimmt hat. Bis dahin ist es ein Vorschlag von A
     **Abstimmung nötig** mit B: `experts/insider.py` setzt künftig den Tag
     statt 0,6.
 
+### Routine-Filter
+
+13. **Insider-Historie als eigene Tabelle in `core/storage.py`**, zunächst nur
+    für Insider-Trades. Fonds und Politiker melden andere Daten (Bestände zum
+    Quartalsende, Wertspannen). Sie bekommen bei Bedarf eine eigene Tabelle.
+    Die Tabelle enthält **alle** Insider-Trades, auch Verkäufe und Käufe unter
+    25.000 USD, und erkennt Personen an der Owner-CIK (`rptOwnerCik`), nicht
+    am Namen.
+14. **Die Historie wird vor dem Teststart vollständig geladen** (Weg 1), nicht
+    erst bei Bedarf je Signal. Danach ergänzt der laufende Scan sie.
+15. **Jedes Insider-Kaufsignal bekommt genau einen von drei Tags:**
+    `"routine"`, `"opportunistic"` oder `"unclassified"`. Letzterer gilt für
+    Insider ohne ausreichende Historie (neue Führungskräfte, junge
+    Börsennotierungen, Erstkäufer).
+16. **Routinekäufe lehnt der Entscheidungs-Agent ab**, nicht der Experte. Er
+    speichert den Grund wie bei jedem abgelehnten Signal. So bleiben alle drei
+    Gruppen für die Auswertung erhalten.
+17. **Portfolios werden über Filter definiert** (Experten und Tags), als Teil
+    des eingefrorenen Regelwerks eines Testlaufs. Jedes Portfolio ist entweder
+    für das Urteil relevant oder dient nur der Beobachtung:
+
+    | Portfolio | Experten | Tags | Zählt für das Urteil? |
+    |---|---|---|---|
+    | Haupt | alle | ohne `routine` | ja |
+    | Schatten Insider | insider | ohne `routine` | ja |
+    | Kontrolle Routine | insider | nur `routine` | nein, nur Beobachtung |
+
+    `"unclassified"` läuft im Haupt-Portfolio mit. Ersetzt `shadow_portfolio(expert)`.
+
 ## Offen
 
 Die Punkte sind nach Abhängigkeit geordnet: Was oben steht, entscheidet über
@@ -183,6 +212,22 @@ einmal vor dem Teststart ein echter Probelauf mit der OneDrive-Kopie.
 „Schema vor den Migrationen“, Migration 1 bringt sie auf den neuen Stand. Die
 Demo-Datei darf notfalls neu erzeugt werden, eine echte Testdatenbank nie.
 
+### 10. Routine-Filter: Definition und Datenquelle
+
+- **Definition:** Wie viele Jahre Historie und welche Regel (aus dem
+  Gedächtnis, nicht geprüft: Handel im selben Kalendermonat in drei
+  aufeinanderfolgenden Jahren) aus dem Volltext von Cohen et al. übernehmen.
+  Ebenso, wie die Studie Insider ohne ausreichende Historie behandelt.
+- **Datenquelle für das Vorab-Laden:** Einzelabruf jeder Meldung ist bei etwa
+  10 Abrufen pro Sekunde (SEC-Grenze) sehr langsam. B prüft, ob die
+  Quartals-Datensätze der SEC zu Insider-Transaktionen reichen.
+  **Abstimmung nötig** mit B.
+- **Owner-CIK:** `data/form4.py` liest `rptOwnerCik` noch nicht aus (Stand nach
+  dem Atom-Feed-Merge). **Abstimmung nötig** mit B.
+- **Auswertung nach Tags und Beobachtungs-Portfolios:** Die Auswertung muss
+  beides darstellen, ohne Beobachtungs-Portfolios ins Urteil einzurechnen.
+  **Abstimmung nötig** mit B (`evaluation/`, `dashboard/`).
+
 ### Offen auf Konzept-Ebene (Regel 5, gemeinsam)
 
 Vergleichs-ETF, LLM-Budget und die übrigen offenen Punkte aus
@@ -195,6 +240,7 @@ eingefrorenen Regelwerk des Testlaufs und müssen daher vor dem Start feststehen
    CEO/CFO-Regel festlegen (Punkt 1), danach Plätze und Startkapital (Punkt 2).
 2. Abstimmung mit B und C zu Notenschlüssel, Tags, Testläufen und
    Dashboard-Sperre.
-3. Umsetzung in dieser Reihenfolge: Migrationen und Backup → `Testlauf` im
-   Datenmodell → `tags` an `Signal` → Einstiegsbefehl mit Windows-Aufgabenplanung
-   → Zählung im EDGAR-Nachlauf.
+3. Umsetzung in dieser Reihenfolge: Migrationen und Backup → `Testlauf` mit
+   Portfolio-Filtern im Datenmodell → `tags` an `Signal` → Tabelle für die
+   Insider-Historie und Vorab-Laden → Einstiegsbefehl mit
+   Windows-Aufgabenplanung → Zählung im EDGAR-Nachlauf.
