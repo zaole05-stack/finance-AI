@@ -8,6 +8,8 @@ __pycache__/
 .env
 *.sqlite
 *.db
+# Downloads, Kurse und Backtest-Ergebnisse. Nur im Projektordner, nicht src/finance_ai/data/.
+/data/
 
 # Gerenderte Doku-Vorschau
 *.md.html
