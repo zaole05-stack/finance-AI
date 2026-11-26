@@ -176,10 +176,10 @@ fehlschlägt, dann die kleinste Umsetzung, dann aufräumen.
 
 ### 1. Gemeinsame Insider-Regeln
 
-- [ ] `signal_from_form4(doc, accession, source_url, observed_at, issuer_sic,
+- [x] `signal_from_form4(doc, accession, source_url, observed_at, issuer_sic,
       created_at, min_value)` aus `signal_from_filing` herausziehen.
       `signal_from_filing` ruft sie nur noch auf.
-- [ ] Bestehende Insider-Tests bleiben unverändert grün.
+- [x] Bestehende Insider-Tests bleiben unverändert grün.
 - [ ] Umstellung auf Tags statt 0,6, sobald `Signal.tags` in `core/` da ist
       (A, BEREICH-A.md Punkt 12).
 
