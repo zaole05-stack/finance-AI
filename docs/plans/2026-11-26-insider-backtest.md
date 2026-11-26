@@ -185,14 +185,18 @@ fehlschlägt, dann die kleinste Umsetzung, dann aufräumen.
 
 ### 2. Quartals-Datensätze
 
-- [ ] Spaltennamen und Bedeutungen anhand der SEC-Dokumentation (PDF auf der
+- [x] Spaltennamen und Bedeutungen anhand der SEC-Dokumentation (PDF auf der
       Datensatz-Seite) prüfen: `SUBMISSION`, `REPORTINGOWNER`, `NONDERIV_TRANS`.
-- [ ] Download je Quartal mit `EdgarClient`, gespeichert unter `data/raw/`.
-      Bereits vorhandene Dateien werden nicht erneut geladen.
-- [ ] Zeilen einer Meldung → `Form4` plus Meldedatum und Accession. Nur
+- [x] Download je Quartal mit `EdgarClient`, gespeichert unter `data/raw/`.
+      Bereits vorhandene Dateien werden nicht erneut geladen. Die Adressen
+      kommen von der Übersichtsseite, weil die Pfade je Quartal verschieden sind.
+- [x] Zeilen einer Meldung → `Form4` plus Meldedatum und Accession. Nur
       `DOCUMENT_TYPE` = 4, keine 4/A.
-- [ ] Fixture: kleiner echter Ausschnitt aus einem Quartal mit einem bekannten
+- [x] Fixture: kleiner echter Ausschnitt aus einem Quartal mit einem bekannten
       Kauf. Prüfung: Er ergibt dasselbe Signal wie dieselbe Meldung über das XML.
+      Abweichung: Die Datensätze runden Preise auf 2 Stellen.
+- [ ] Vor dem vollen Lauf prüfen, wie viele Signale durch die Rundung über
+      oder unter die 25.000-USD-Schwelle rutschen. Im Bericht nennen.
 
 ### 3. Firmendaten
 

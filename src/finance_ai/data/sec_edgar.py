@@ -58,9 +58,16 @@ class EdgarClient:
         Abgebrochene Verbindungen sowie HTTP 429 und 5xx werden mit wachsender
         Wartezeit wiederholt. Bleibt der Fehler, wird er weitergereicht.
         """
+        return self._retry(self._get_once, url)
+
+    def get_bytes(self, url: str) -> bytes | None:
+        """Wie `get`, aber für Dateien wie ZIP-Archive. Großzügigere Zeitgrenze."""
+        return self._retry(lambda u: self._fetch_once(u, timeout=300), url)
+
+    def _retry(self, once, url):
         for attempt in range(self._retries + 1):
             try:
-                return self._get_once(url)
+                return once(url)
             except urllib.error.HTTPError as error:
                 if error.code == 404:
                     return None
@@ -73,6 +80,9 @@ class EdgarClient:
         raise AssertionError("unerreichbar")
 
     def _get_once(self, url: str) -> str:
+        return self._fetch_once(url).decode("utf-8", errors="replace")
+
+    def _fetch_once(self, url: str, timeout: float = 30) -> bytes:
         wait = self._last_request + self._min_interval - time.monotonic()
         if wait > 0:
             time.sleep(wait)
@@ -80,8 +90,8 @@ class EdgarClient:
             url, headers={"User-Agent": self._user_agent, "Accept-Encoding": "identity"}
         )
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                return response.read().decode("utf-8", errors="replace")
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return response.read()
         finally:
             self._last_request = time.monotonic()
 
