@@ -1,0 +1,100 @@
+Datencheck (Plan-Schritt 4b): Ergebnis für @Jumikage
+
+Hi Jumikage,
+
+der Datencheck ist durch. Lauf am 27.11.2026, fertig 10:25, auf diesem
+Commit (c26f916). Unten stehen data_check.md und data_check.json im Wortlaut.
+
+ERGEBNIS: weiter mit Schritt 5–9.
+2008 gibt den Ausschlag mit 4,4 % der Signale bei −55 % (2015: 3,3 %).
+Beide Jahre liegen klar unter der 10-%-Grenze. Fälle ohne Firmendaten gab
+es in keinem Jahr. Mit rund 197 Signalen pro Woche 2008 und 125 im Jahr
+2015 sollten sich die Slots füllen.
+
+BITTE VOR SCHRITT 5 KLÄREN:
+Nur 32,2 % der Signale von 2008 haben überhaupt einen Kurs (2015: 46,2 %).
+Die größte Gruppe ohne Kurs ist "erst nach der Haltedauer verschwunden",
+das sind 62,7 % der Signale 2008 und 50,0 % im Jahr 2015. Für die
+−55-%-Schwelle zählt diese Gruppe nicht. Fallen diese Signale im Backtest
+aber weg, misst er 2008 nur etwa ein Drittel der Signale. Das wären genau
+die Firmen, für die Yahoo heute noch Kurse hat, also ein
+Survivorship-Risiko. Mir kommt der Anteil außerdem hoch vor. Vielleicht
+sind das eher Lücken bei Yahoo als echte Delistings. Wie behandelt der
+Backtest diese Gruppe?
+
+BUG IN src/finance_ai/data/sec_edgar.py:
+Der Lauf brach sechsmal ab, jedes Mal mit http.client.IncompleteRead von
+data.sec.gov. Vier Abbrüche kamen, weil der Laptop in den Standby ging,
+einer passierte im wachen Zustand. _retry (Zeile 67–80) fängt nur
+HTTPError und OSError ab. IncompleteRead ist aber eine
+http.client.HTTPException und wird deshalb nicht wiederholt. Ein einzelner
+Verbindungsabbruch beendet so den ganzen Lauf. Aufgetreten ist das in
+load_company (sec_company.py, Zeile 187 und 196) und vermutlich einmal beim
+ZIP-Download über get_bytes. Ein zusätzliches except
+http.client.HTTPException in _retry sollte reichen. Ich habe am Code nichts
+geändert. Mit dem Cache lief es nach jedem Neustart weiter, der sechste Lauf
+ging durch.
+
+SONST IM LOG:
+1.809 "possibly delisted"-Zeilen, das ist normal. Dazu ein paar einzelne
+Yahoo-Fehler: ein curl-HTTP2-Fehler bei OKE und "Period 'max' is invalid"
+bei Vorzugsaktien wie GL-PD und CNO-PA. Wenn du die Logs aller sechs Läufe
+brauchst, sag Bescheid.
+
+Renditen habe ich wie vereinbart nicht angeschaut.
+
+Ole
+
+Lesen: git fetch origin refs/notes/commits:refs/notes/commits
+       git notes show c26f916
+
+==================== data/data_check.md ====================
+Haltedauer für „verschwand in der Haltedauer“: 91 Tage.
+
+| Jahr | Signale | pro Woche | mit Kurs | davon über heutiges Kürzel | Kurs passt nicht | ohne Firmendaten | mit −55 % |
+|---|---|---|---|---|---|---|---|
+| 2008 | 10226 | 196.7 | 32.2 % | 546 | 287 | 0 | **4.4 %** |
+| 2015 | 6507 | 125.1 | 46.2 % | 451 | 179 | 0 | **3.3 %** |
+
+| Jahr | Übernahme in der Haltedauer | Pleite in der Haltedauer | in der Haltedauer verschwunden, Grund unbekannt | erst nach der Haltedauer verschwunden | keine Meldung zum Verschwinden |
+|---|---|---|---|---|---|
+| 2008 | 79 (0.8 %) | 31 (0.3 %) | 186 (1.8 %) | 6411 (62.7 %) | 231 (2.3 %) |
+| 2015 | 36 (0.6 %) | 5 (0.1 %) | 38 (0.6 %) | 3252 (50.0 %) | 170 (2.6 %) |
+
+**Ergebnis:** weiter mit Schritt 5–9 (maßgeblich ist das schlechtere Jahr).
+
+==================== data/data_check.json ====================
+[
+ {
+  "year": 2008,
+  "signals": 10226,
+  "with_price": 3288,
+  "via_current_ticker": 546,
+  "mismatch": 287,
+  "no_company": 0,
+  "at_minus_55": 448,
+  "cases": {
+   "AFTER_HOLDING": 6411,
+   "NO_EVENT": 231,
+   "UNKNOWN": 186,
+   "TAKEOVER": 79,
+   "BANKRUPTCY": 31
+  }
+ },
+ {
+  "year": 2015,
+  "signals": 6507,
+  "with_price": 3006,
+  "via_current_ticker": 451,
+  "mismatch": 179,
+  "no_company": 0,
+  "at_minus_55": 213,
+  "cases": {
+   "AFTER_HOLDING": 3252,
+   "NO_EVENT": 170,
+   "TAKEOVER": 36,
+   "UNKNOWN": 38,
+   "BANKRUPTCY": 5
+  }
+ }
+]
