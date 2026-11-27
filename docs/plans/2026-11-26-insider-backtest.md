@@ -220,8 +220,10 @@ fehlschlägt, dann die kleinste Umsetzung, dann aufräumen.
 - [x] Fixture: kleiner echter Ausschnitt aus einem Quartal mit einem bekannten
       Kauf. Prüfung: Er ergibt dasselbe Signal wie dieselbe Meldung über das XML.
       Abweichung: Die Datensätze runden Preise auf 2 Stellen.
-- [ ] Vor dem vollen Lauf prüfen, wie viele Signale durch die Rundung über
+- [x] Vor dem vollen Lauf prüfen, wie viele Signale durch die Rundung über
       oder unter die 25.000-USD-Schwelle rutschen. Im Bericht nennen.
+      Höchstens 1,3 % (2008) und 1,1 % (2015), siehe
+      [Befunde](2026-11-28-datencheck-befunde.md).
 
 ### 3. Firmendaten
 
@@ -288,10 +290,16 @@ Mehr sollte die Annahme nicht bewegen, sonst entscheidet sie statt des Signals.
 
 ### 5. Signale
 
-- [ ] Signale aus allen Quartalen über die Regeln aus Aufgabe 1, mit Status: ok,
-      kein Kurs, Kurs passt nicht, Börsenwert unbekannt.
-- [ ] Für jedes Kriterium, das Historie braucht, ein Test, der einen Blick in
-      die Zukunft entlarven würde.
+- [x] Signale aus allen Quartalen über die Regeln aus Aufgabe 1, mit Status: ok,
+      kein Kurs, Kurs passt nicht, Börsenwert unbekannt (`evaluation/backtest.py`).
+      Auch Signale ohne Kurs bekommen einen Börsenwert (Aktienzahl × gemeldeter
+      Kaufpreis), damit die Grenze für alle drei Stufen gilt.
+- [ ] Vor Schritt 6: Entscheidung zu den 50–63 % Signalen, die in der
+      mittleren Stufe wegfallen ([Befunde](2026-11-28-datencheck-befunde.md),
+      Abschnitt 1).
+- [x] Für jedes Kriterium, das Historie braucht, ein Test, der einen Blick in
+      die Zukunft entlarven würde (Aktienzahl, Kurs für den Börsenwert,
+      Abschnitt). Für Routinekäufer folgt er mit dem Kriterium.
 
 ### 6. Messung
 
@@ -376,7 +384,11 @@ Schritt 1–5 und der Datencheck laufen ohne diese Entscheidungen.
   auszuschließen (Cohen, Malloy & Pomorski 2012). Routinekäufer ist, wer in
   jedem der 3 Vorjahre im selben Kalendermonat gekauft hat. Die Historie dafür
   liefern die Quartalsdaten auch live. B entscheidet vor dem vollen Lauf, A
-  hat dafür schon einen Tag „opportunistischer Käufer“ vorgesehen.
+  hat dafür schon einen Tag „opportunistischer Käufer“ vorgesehen. Die Definition im
+  Papier verlangt drei Jahre Historie, siehe [Befunde](2026-11-28-datencheck-befunde.md),
+  Abschnitt 3.
 - **Wert −55 %:** in Shumway & Warther (1999) nachprüfen, bevor er im Code steht.
+  Geprüft, mit Einschränkung: [Befunde](2026-11-28-datencheck-befunde.md),
+  Abschnitt 2.
 - **Laufzeit:** Wie lange der Yahoo-Abruf für einige Tausend Ticker dauert und
   ob Yahoo ihn drosselt. Das zeigt sich erst in Schritt 4.
