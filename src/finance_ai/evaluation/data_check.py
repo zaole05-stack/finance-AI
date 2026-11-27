@@ -29,14 +29,17 @@ from typing import Protocol
 
 from finance_ai.data.sec_company import CompanyInfo, MissingPrice
 from finance_ai.data.sec_insider_datasets import DatasetFiling
-from finance_ai.experts import insider
+from finance_ai.evaluation.backtest import (
+    ANY_OPERATING_SIC,
+    StorePrices,
+    insider_signal,
+    price_outcome,
+)
 from finance_ai.paper_trading.daily_prices import PriceCheck, PriceStatus
 
 WARN_SHARE = 0.10
 STOP_SHARE = 0.20
 AT_MINUS_55 = frozenset({MissingPrice.BANKRUPTCY, MissingPrice.UNKNOWN, MissingPrice.NO_EVENT})
-# Für den ersten Filter vor dem Laden der Firmendaten: irgendein zulässiger Code.
-_ANY_OPERATING_SIC = "0000"
 
 log = logging.getLogger(__name__)
 
@@ -88,49 +91,28 @@ def check_filings(
     cases: Counter[MissingPrice] = Counter()
     now = datetime.now(UTC)
     for filing in filings:
-        if _signal(filing, _ANY_OPERATING_SIC, now) is None:
+        if insider_signal(filing, ANY_OPERATING_SIC, now) is None:
             continue  # Regeln ohne Branchencode schon nicht erfüllt, Firma nicht laden
         info = company_for(filing.issuer_cik)
         if info is None:
             report.no_company += 1
             continue
-        if _signal(filing, info.sic, now) is None:
+        if insider_signal(filing, info.sic, now) is None:
             continue
         report.signals += 1
-        buy = [t for t in filing.form4.transactions if t.code == "P" and t.acquired][-1]
-        entry, exit_ = filing.filing_date, filing.filing_date + holding
-        check = prices.check(filing.form4.ticker, info, buy.day, buy.price)
-        if check.status is PriceStatus.OK:
-            last = prices.last_bar_day(check.ticker)
-            if last is not None and last >= exit_:
-                report.with_price += 1
-                report.via_current_ticker += check.via_current_ticker
-                continue
-            # Kurse enden in der Haltedauer: Die Aktie verschwand sicher in dieser Zeit.
-            case = info.missing_price_case(entry, exit_)
-            if case in (MissingPrice.AFTER_HOLDING, MissingPrice.NO_EVENT):
-                case = MissingPrice.UNKNOWN
-        else:
-            report.mismatch += check.status is PriceStatus.MISMATCH
-            case = info.missing_price_case(entry, exit_)
-        cases[case] += 1
+        outcome = price_outcome(filing, info, prices, holding)
+        if outcome.with_price:
+            report.with_price += 1
+            report.via_current_ticker += outcome.check.via_current_ticker
+            continue
+        report.mismatch += outcome.check.status is PriceStatus.MISMATCH
+        cases[outcome.missing_case] += 1
     report.cases = dict(cases)
     report.at_minus_55 = sum(n for case, n in cases.items() if case in AT_MINUS_55)
     if log.isEnabledFor(logging.INFO):
         log.info("Jahr %s: %d Signale, %.1f %% mit −55 %%", year, report.signals,
                  100 * report.share_at_minus_55)
     return report
-
-
-def _signal(filing: DatasetFiling, sic: str | None, now: datetime):
-    return insider.signal_from_form4(
-        filing.form4,
-        accession=filing.accession,
-        source_url=filing.source_url,
-        observed_at=filing.observed_at,
-        issuer_sic=sic,
-        created_at=now,
-    )
 
 
 def verdict(share_at_minus_55: float) -> Verdict:
@@ -174,20 +156,6 @@ def markdown(reports: list[YearReport], holding: timedelta) -> str:
     return "\n".join(lines) + "\n"
 
 
-class _StorePrices:
-    def __init__(self, store):
-        self._store = store
-
-    def check(self, ticker, info, day, price):
-        from finance_ai.paper_trading.daily_prices import check_price
-
-        return check_price(self._store, ticker, info, day, price)
-
-    def last_bar_day(self, ticker):
-        bars = self._store.bars(ticker)
-        return bars[-1].day if bars else None
-
-
 def main(argv: list[str] | None = None) -> None:
     from finance_ai.config import sec_user_agent
     from finance_ai.data.sec_company import load_company
@@ -219,7 +187,7 @@ def main(argv: list[str] | None = None) -> None:
             quarters = {f"{year}q{q}" for q in range(1, 5)}
             paths = download_quarters(client, args.data / "raw", only=quarters)
             filings = (f for path in paths for f in read_quarter(path))
-            reports.append(check_filings(filings, company_for, _StorePrices(store), holding, year))
+            reports.append(check_filings(filings, company_for, StorePrices(store), holding, year))
 
     text = markdown(reports, holding)
     (args.data / "data_check.md").write_text(text, encoding="utf-8")
