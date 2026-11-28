@@ -216,8 +216,29 @@ BEGIN
 END;
 """
 
+# Protokoll der stündlichen Läufe (betrieb.py, BEREICH-A.md Offen 5). Ausfälle
+# und Lücken im Scan sollen im Ergebnis sichtbar sein. scan_until NULL heißt:
+# Scan fehlgeschlagen, der nächste Lauf scannt ab demselben Zeitpunkt.
+_OPERATION_RUNS_V6 = """
+CREATE TABLE operation_runs (
+    id             INTEGER PRIMARY KEY,
+    test_run       TEXT NOT NULL REFERENCES test_runs (id),
+    started_at     TEXT NOT NULL,
+    finished_at    TEXT NOT NULL,
+    scan_since     TEXT NOT NULL,
+    scan_until     TEXT,
+    new_signals    INTEGER NOT NULL,
+    orders         INTEGER NOT NULL,
+    missing_prices TEXT NOT NULL DEFAULT '[]',
+    backup         TEXT,
+    error          TEXT
+);
+CREATE INDEX operation_runs_test_run ON operation_runs (test_run, started_at);
+"""
+
 MIGRATIONS: tuple[str, ...] = (
     _SCHEMA_V1, _TEST_RUNS_V2, _TAGS_V3, _INSIDER_TRADES_V4, _CODE_RULES_V5,
+    _OPERATION_RUNS_V6,
 )
 
 
