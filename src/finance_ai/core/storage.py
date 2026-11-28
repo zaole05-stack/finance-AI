@@ -204,7 +204,21 @@ CREATE TABLE insider_trades (
 CREATE INDEX insider_trades_owner ON insider_trades (owner_cik, filed_at);
 """
 
-MIGRATIONS: tuple[str, ...] = (_SCHEMA_V1, _TEST_RUNS_V2, _TAGS_V3, _INSIDER_TRADES_V4)
+# Testläufe frieren auch die Regeln aus dem Code ein (decision/regelwerk.py).
+# Ältere Testläufe bekommen "{}" und nehmen danach keine Entscheidungen an.
+_CODE_RULES_V5 = """
+ALTER TABLE test_runs ADD COLUMN code_rules TEXT NOT NULL DEFAULT '{}';
+DROP TRIGGER test_runs_frozen;
+CREATE TRIGGER test_runs_frozen
+BEFORE UPDATE OF id, name, owner, started_at, settings, code_rules ON test_runs
+BEGIN
+    SELECT RAISE(ABORT, 'Testlauf ist eingefroren');
+END;
+"""
+
+MIGRATIONS: tuple[str, ...] = (
+    _SCHEMA_V1, _TEST_RUNS_V2, _TAGS_V3, _INSIDER_TRADES_V4, _CODE_RULES_V5,
+)
 
 
 class SchemaTooNewError(RuntimeError):

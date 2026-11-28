@@ -12,6 +12,7 @@ from finance_ai.core.testrun import (
     default_portfolios,
     get_test_run,
 )
+from finance_ai.decision.regelwerk import code_rules
 from finance_ai.decision.run import run_decisions, run_test_run
 from test_decision import PRICES, RULES, T0, sig
 from test_testrun import START
@@ -76,7 +77,7 @@ def test_routine_is_rejected_with_reason_in_legacy_run(conn):
 def test_portfolios_of_decision_17(conn):
     run = create_test_run(
         conn, "r", "Routine-Filter", "zaole05-stack", START, Settings(rules=RULES),
-        default_portfolios(["insider", "politik"]),
+        default_portfolios(["insider", "politik"]), code_rules=code_rules(),
     )
     storage.save_new_signals(
         conn,
@@ -112,7 +113,7 @@ def test_control_portfolio_only_with_insider():
 
 def test_tag_filters_are_frozen_with_the_run(conn):
     spec = PortfolioSpec("x", include_tags={OPPORTUNISTIC}, exclude_tags={TOP_EXECUTIVE})
-    create_test_run(conn, "r", "n", "o", START, Settings(rules=RULES), [spec])
+    create_test_run(conn, "r", "n", "o", START, Settings(rules=RULES), [spec], code_rules=code_rules())
     assert get_test_run(conn, "r").portfolios == (spec,)
 
 

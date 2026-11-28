@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime
 
@@ -85,6 +85,9 @@ class TestRun:
     started_at: datetime
     settings: Settings
     portfolios: tuple[PortfolioSpec, ...]
+    # Regeln aus dem Code beim Anlegen, als JSON (decision/regelwerk.py).
+    # "{}" bei Testläufen von vor Migration 5: Die nehmen keine Entscheidungen an.
+    code_rules: str = "{}"
     ended_at: datetime | None = None
 
     def __post_init__(self) -> None:
@@ -151,11 +154,14 @@ def create_test_run(
     started_at: datetime,
     settings: Settings,
     portfolios: Iterable[PortfolioSpec],
+    *,
+    code_rules: Mapping,
 ) -> TestRun:
     """Legt einen Testlauf an. Das Regelwerk wird dabei eingefroren.
 
-    `test_start` in den Einstellungen wird auf `started_at` gesetzt, damit
-    beide nicht auseinanderlaufen.
+    Eingefroren werden die Einstellungen und `code_rules`, die Regeln aus dem
+    Code (`decision.regelwerk.code_rules()`). `test_start` in den Einstellungen
+    wird auf `started_at` gesetzt, damit beide nicht auseinanderlaufen.
     """
     run = TestRun(
         id=id,
@@ -164,11 +170,14 @@ def create_test_run(
         started_at=started_at,
         settings=replace(settings, test_start=started_at),
         portfolios=tuple(portfolios),
+        code_rules=json.dumps(code_rules, sort_keys=True, ensure_ascii=False, separators=(",", ":")),
     )
     with conn:
         conn.execute(
-            "INSERT INTO test_runs (id, name, owner, started_at, settings) VALUES (?, ?, ?, ?, ?)",
-            (run.id, run.name, run.owner, to_db_time(run.started_at), settings_to_json(run.settings)),
+            "INSERT INTO test_runs (id, name, owner, started_at, settings, code_rules) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (run.id, run.name, run.owner, to_db_time(run.started_at), settings_to_json(run.settings),
+             run.code_rules),
         )
         conn.executemany(
             "INSERT INTO run_portfolios (portfolio, run_id, key, experts, counts_for_verdict, "
@@ -227,6 +236,7 @@ def _run_from_row(conn: sqlite3.Connection, row: sqlite3.Row) -> TestRun:
         owner=row["owner"],
         started_at=from_db_time(row["started_at"]),
         settings=settings_from_json(row["settings"]),
+        code_rules=row["code_rules"],
         portfolios=tuple(
             PortfolioSpec(
                 key=spec["key"],
