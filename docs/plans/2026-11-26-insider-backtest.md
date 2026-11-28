@@ -306,19 +306,30 @@ Mehr sollte die Annahme nicht bewegen, sonst entscheidet sie statt des Signals.
 
 ### 6. Messung
 
-- [ ] Vorsprung je Einzelsignal in drei Stufen, gegen den ETF aus dem Regelwerk
-      (bis dahin IWM, IWC als Zweitwert).
-- [ ] Portfolio über `decide()` und `simulate()` mit den Regeln aus dem
-      Regelwerk, Lauf je Handelstag. Im Stresstest ohne Börsenwert-Funktion
-      (`market_cap=None`), sonst unverändert.
-- [ ] 6-Monats-Fenster mit monatlichem Start: Mittelwert und Anteil der Fenster
-      vor dem ETF. Getrennt für Stresstest, Urteilsabschnitt und dessen
-      beide Hälften.
-- [ ] Test: Das Urteil nutzt keine Signale vor dem 1.7.2011.
-- [ ] Block-Bootstrap nach Kalendermonat für das 95-%-Intervall.
-- [ ] Rechnung mit doppelter Slippage.
-- [ ] Prüfung: Für einen kleinen Fall mit festen Kursen stimmen die Zahlen mit
-      einer Rechnung von Hand überein.
+Umgesetzt in `evaluation/measure.py`, getestet nur mit festen Kursen
+(`tests/test_measure.py`). Auf echten Daten ist noch nichts gelaufen.
+
+- [x] Vorsprung je Einzelsignal in drei Stufen, gegen den ETF aus dem Regelwerk
+      (bis dahin IWM, IWC als Zweitwert). Die Steuer wirkt beidseitig
+      (Verlusttopf). Damit ist der Vorsprung der Vorsprung vor Steuer mal
+      (1 − Steuersatz), Kriterium 2 hängt nicht an der Steuer.
+- [x] Portfolio über `decide()` mit den Regeln aus dem Regelwerk, Lauf je
+      Handelstag zur Eröffnung. Im Stresstest ohne Börsenwert-Funktion
+      (`market_cap=None`), sonst unverändert. Ausgeführt wird über
+      `Account.execute()` wie in `simulate()`, weil `simulate()` abgelehnte
+      Käufe nicht an `decide()` zurückmeldet. Ein Test prüft, dass
+      `simulate()` mit denselben Orders dasselbe Ergebnis liefert.
+- [x] 6-Monats-Fenster mit monatlichem Start, jedes mit frischem Startkapital
+      wie im Paper Trading: Mittelwert und Anteil der Fenster vor dem ETF.
+      Getrennt für Stresstest, Urteilsabschnitt und dessen beide Hälften.
+      Ein Fenster zählt nur, wenn es ganz im Abschnitt bzw. in der Hälfte liegt.
+- [x] Test: Das Urteil nutzt keine Signale vor dem 1.7.2011.
+- [x] Block-Bootstrap nach Kalendermonat für das 95-%-Intervall.
+- [x] Rechnung mit doppelter Slippage (`double_slippage`).
+- [x] Prüfung: Für einen kleinen Fall mit festen Kursen stimmen die Zahlen mit
+      einer Rechnung von Hand überein (Einzelsignal und Fenster).
+- [x] Signale ohne Kurs: eigener Schlüssel im Portfolio, Kurs bis Ende der
+      Haltedauer der gemeldete Kaufpreis, danach der feste Wert der Stufe.
 
 ### 7. Lauf und Neulauf
 
@@ -388,6 +399,19 @@ Schritt 1–5 und der Datencheck laufen ohne diese Entscheidungen.
 - `docs/BACKTEST.md` und der Dashboard-Tab zeigen dieselben Zahlen.
 
 ## Offen
+
+- **Ende des Zeitraums (vor dem Lauf klären):** Signale bis 30.9.2026 haben
+  ihren Ausstieg bis Ende Dezember 2026. Diese Kurse gibt es am 28.11.2026
+  noch nicht. Schritt 5 stuft solche Signale als „Kurse enden in der
+  Haltedauer“ ein. In der mittleren Stufe gingen sie mit −55 % ein. Die Messung
+  bricht in diesem Fall ab, statt zu raten. Entweder läuft der Backtest erst
+  ab Januar 2027, oder `END` wird auf den letzten Meldetag mit vollständiger
+  Haltedauer gelegt. Das entscheidet B, ohne Blick auf Renditen.
+- **Kriterium 1 ist doppeldeutig:** „mindestens 5 Prozentpunkte im Mittel,
+  und das in mindestens 60 % der Fenster“. Gemeint sein kann: 60 % der Fenster
+  vor dem ETF (> 0) oder 60 % mit mindestens 5 Prozentpunkten. Die Messung
+  liefert beide Anteile (`share_ahead`, `share_5pp`). B legt vor dem Lauf
+  fest, welcher zählt.
 
 - **Weitere Insider-Kriterien aus Studien:** Vorschlag ist, Routinekäufer
   auszuschließen (Cohen, Malloy & Pomorski 2012). Routinekäufer ist, wer in

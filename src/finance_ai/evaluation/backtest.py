@@ -11,7 +11,7 @@ bekommt einen Status, der sagt, ob es sich messen lässt:
 - Börsenwert unbekannt: nur im Urteilsabschnitt, wenn keine Aktienzahl
   bekannt war (wie live: dann kein Kauf).
 
-Hier werden **keine Renditen** berechnet, das kommt in Schritt 6.
+Hier werden **keine Renditen** berechnet, das macht `measure` (Schritt 6).
 
 Kein Blick in die Zukunft bei der Auswahl: Branchencode (heutiger, im Bericht
 genannt), Aktienzahl nur aus Berichten, die vor dem Meldetag eingereicht waren,
@@ -109,6 +109,8 @@ class BacktestSignal:
     market_cap: Decimal | None
     market_cap_source: str | None  # "Yahoo" oder "Meldung"
     missing_case: MissingPrice | None
+    # Gewichteter gemeldeter Kaufpreis: Einstieg für die festen Werte ohne Kurs.
+    reported_price: Decimal | None = None
 
 
 @dataclass
@@ -192,7 +194,14 @@ def classify(
         market_cap=cap,
         market_cap_source=cap_source,
         missing_case=outcome.missing_case,
+        reported_price=_reported_price(filing),
     )
+
+
+def _reported_price(filing) -> Decimal | None:
+    buys = _buys(filing)
+    shares = sum((t.shares for t in buys), Decimal(0))
+    return sum((t.value for t in buys), Decimal(0)) / shares if shares else None
 
 
 def _market_cap(filing, info, prices, check) -> tuple[Decimal | None, str | None]:
@@ -204,11 +213,10 @@ def _market_cap(filing, info, prices, check) -> tuple[Decimal | None, str | None
         close = prices.raw_close(check.ticker, filing.filing_date)
         if close is not None:
             return count * close, "Yahoo"
-    buys = _buys(filing)
-    shares = sum((t.shares for t in buys), Decimal(0))
-    if not shares:
+    price = _reported_price(filing)
+    if price is None:
         return None, None
-    return count * sum((t.value for t in buys), Decimal(0)) / shares, "Meldung"
+    return count * price, "Meldung"
 
 
 def build_signals(

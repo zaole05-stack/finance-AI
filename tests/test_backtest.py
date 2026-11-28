@@ -122,6 +122,8 @@ def test_no_price_keeps_case_and_market_cap_from_reported_price():
     # auch für die Fälle ohne Kurs gilt.
     assert s.market_cap == D("12000000")
     assert s.market_cap_source == "Meldung"
+    # Einstiegspreis für die festen Werte im Portfolio (Schritt 6).
+    assert s.reported_price == D("4")
 
 
 def test_mismatch():
