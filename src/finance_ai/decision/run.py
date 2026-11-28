@@ -8,8 +8,9 @@ So zeigt der Vergleich, ob die Kombination besser ist als jeder Experte allein.
 from __future__ import annotations
 
 import sqlite3
-from dataclasses import replace
+import json
 from collections.abc import Iterable
+from dataclasses import replace
 from datetime import datetime, timedelta
 
 from finance_ai.core import storage
@@ -22,6 +23,7 @@ from finance_ai.decision.agent import (
     decide,
     holdings_from_orders,
 )
+from finance_ai.decision.regelwerk import CodeRulesChangedError, changed_rules, code_rules
 from finance_ai.paper_trading.market_data import CachedPriceSource
 from finance_ai.paper_trading.prices import NoPriceError, PriceSource
 
@@ -58,12 +60,25 @@ def run_test_run(
     """Entscheidungslauf für einen Testlauf mit dessen eingefrorenen Regeln.
 
     Nur Signale ab Beginn des Testlaufs zählen. Ein beendeter Testlauf nimmt
-    keine Entscheidungen mehr an.
+    keine Entscheidungen mehr an. Weichen die Regeln im Code vom Stand beim
+    Anlegen ab, auch nicht: Dann misst der Testlauf eine andere Strategie.
     """
     if run.is_ended:
         raise ValueError(f"Testlauf {run.id} ist beendet")
+    changed = changed_rules(json.loads(run.code_rules), code_rules())
+    if changed:
+        raise CodeRulesChangedError(
+            f"Testlauf {run.id}: Regeln im Code geändert seit dem Start ({', '.join(changed)}). "
+            "Neuen Testlauf anlegen oder die Änderung zurücknehmen."
+        )
     if at < run.started_at:
         raise ValueError(f"Testlauf {run.id} beginnt erst {run.started_at.isoformat()}")
+    if run.settings.rules.max_market_cap is not None and market_cap is None:
+        # Ohne Abfrage prüft decide() den Börsenwert nicht. Der Testlauf liefe
+        # dann still ohne die eingefrorene Grenze.
+        raise ValueError(
+            f"Testlauf {run.id} hat eine Börsenwert-Grenze, aber keine Börsenwert-Abfrage"
+        )
     portfolios = [(run.portfolio(spec), spec) for spec in run.portfolios]
     return _decide_all(
         conn, at, prices, portfolios, run.settings.rules, market_cap, since=run.started_at

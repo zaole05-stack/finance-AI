@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from dataclasses import replace
 from datetime import timedelta
@@ -5,7 +6,7 @@ from decimal import Decimal as D
 
 import pytest
 
-from finance_ai.core import storage
+from finance_ai.core import insider_history, storage
 from finance_ai.core.settings import Settings, save_settings
 from finance_ai.core.testrun import (
     PortfolioSpec,
@@ -15,6 +16,9 @@ from finance_ai.core.testrun import (
     get_test_run,
     list_test_runs,
 )
+from finance_ai.decision import regelwerk
+from finance_ai.decision.regelwerk import CodeRulesChangedError, code_rules
+from finance_ai.experts import insider
 from finance_ai.decision.run import run_decisions, run_test_run
 from test_decision import PRICES, RULES, T0, sig
 
@@ -38,6 +42,7 @@ def make_run(conn, portfolios=None, id="insider-91d", settings=SETTINGS):
         started_at=START,
         settings=settings,
         portfolios=portfolios or default_portfolios(["insider", "politik"]),
+        code_rules=code_rules(),
     )
 
 
@@ -69,6 +74,7 @@ def test_settings_are_frozen_against_later_changes(conn):
         "UPDATE test_runs SET settings = '{}'",
         "UPDATE test_runs SET started_at = '2000-01-01T00:00:00.000000+00:00'",
         "UPDATE test_runs SET name = 'anders'",
+        "UPDATE test_runs SET code_rules = '{}'",
         "DELETE FROM test_runs",
         "UPDATE run_portfolios SET experts = NULL",
         "UPDATE run_portfolios SET counts_for_verdict = 0",
@@ -186,7 +192,7 @@ def test_end_unknown_run(conn):
 def test_invalid_runs_are_rejected(conn, kwargs):
     args = dict(
         id="ok", name="x", owner="y", started_at=START, settings=SETTINGS,
-        portfolios=default_portfolios(["insider"]),
+        portfolios=default_portfolios(["insider"]), code_rules={},
     )
     args.update(kwargs)
     with pytest.raises(ValueError):
@@ -214,3 +220,42 @@ def test_run_ids_are_unique(conn):
 def test_start_cash_is_frozen_too(conn):
     run = make_run(conn, settings=Settings(rules=replace(RULES, start_cash=D("5000"))))
     assert get_test_run(conn, run.id).settings.rules.start_cash == D("5000")
+
+
+def test_code_rules_are_frozen_with_the_run(conn):
+    run = make_run(conn)
+    assert json.loads(get_test_run(conn, run.id).code_rules) == code_rules()
+
+
+def test_run_refuses_when_rules_in_code_changed(conn, monkeypatch):
+    run = make_run(conn)
+    storage.save_signal(conn, sig("AAA"))
+    monkeypatch.setattr(insider, "DEFAULT_MIN_VALUE", D("50000"))
+    monkeypatch.setattr(insider_history, "ROUTINE_YEARS", 2)
+    with pytest.raises(CodeRulesChangedError, match="Insider.Mindestbetrag, Routine.Vorjahre"):
+        run_test_run(conn, run, T0, PRICES)
+    assert storage.list_orders(conn) == []
+
+
+def test_run_from_before_code_rules_takes_no_decisions(conn):
+    run = make_run(conn)
+    old = replace(run, code_rules="{}")
+    with pytest.raises(CodeRulesChangedError, match="Insider.Mindestbetrag"):
+        run_test_run(conn, old, T0, PRICES)
+
+
+def test_fingerprint_ignores_key_order():
+    rules = code_rules()
+    reordered = dict(reversed(list(rules.items())))
+    assert regelwerk.fingerprint(reordered) == regelwerk.fingerprint(rules)
+    assert regelwerk.fingerprint({**rules, "Routine": {}}) != regelwerk.fingerprint(rules)
+
+
+def test_run_with_market_cap_limit_needs_a_lookup(conn):
+    limited = Settings(rules=replace(RULES, max_market_cap=D("2000000000")))
+    run = make_run(conn, settings=limited)
+    storage.save_signal(conn, sig("AAA"))
+    with pytest.raises(ValueError, match="Börsenwert-Abfrage"):
+        run_test_run(conn, run, T0, PRICES)
+    (main, *_) = run_test_run(conn, run, T0, PRICES, market_cap=lambda _: D("3000000000"))
+    assert main.orders == []

@@ -13,8 +13,8 @@ Pomorski (2012), "Decoding Inside Information", Journal of Finance 67(3).
 **Vorläufig:** Die genaue Definition von „Routine“ ist im Volltext der Studie
 noch nicht geprüft (BEREICH-A.md, Offen Punkt 1). Die Regel unten folgt dem
 Grundgedanken der Studie: Wer jedes Jahr im selben Kalendermonat handelt,
-handelt aus Gewohnheit, nicht aus Information. Die Parameter (`years`,
-`codes`) gehören ins eingefrorene Regelwerk, sobald sie geprüft sind.
+handelt aus Gewohnheit, nicht aus Information. Die Parameter (`ROUTINE_YEARS`,
+`OPEN_MARKET_CODES`) stehen im eingefrorenen Regelwerk (decision/regelwerk.py).
 """
 
 from __future__ import annotations
@@ -30,6 +30,8 @@ from finance_ai.core.storage import from_db_time, to_db_time
 
 # Käufe und Verkäufe am offenen Markt (Form-4-Codes P und S).
 OPEN_MARKET_CODES = frozenset({"P", "S"})
+# Vorjahre, in denen gehandelt sein muss (Cohen, Malloy & Pomorski: drei).
+ROUTINE_YEARS = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,7 +130,7 @@ def owner_trades(conn: sqlite3.Connection, owner_cik: str, known_at: datetime) -
 def classify_trade_pattern(
     history: Iterable[InsiderTrade],
     trade_date: date,
-    years: int = 3,
+    years: int = ROUTINE_YEARS,
     codes: frozenset[str] = OPEN_MARKET_CODES,
 ) -> str:
     """Stuft einen Trade am `trade_date` ein: routine, opportunistic oder unclassified.
@@ -162,7 +164,7 @@ def classify_owner(
     owner_cik: str,
     trade_date: date,
     known_at: datetime,
-    years: int = 3,
+    years: int = ROUTINE_YEARS,
     codes: frozenset[str] = OPEN_MARKET_CODES,
 ) -> str:
     """Einstufung mit der gespeicherten Historie, nur mit dem Wissen bis `known_at`."""

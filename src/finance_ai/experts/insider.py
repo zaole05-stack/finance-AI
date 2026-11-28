@@ -57,7 +57,7 @@ TOP_EXECUTIVE_CONFIDENCE = 0.6
 DEFAULT_CONFIDENCE = 0.5
 # Branchencodes ohne operatives Geschäft: Fonds, SPACs, Royalty Trusts, REITs.
 EXCLUDED_SIC = frozenset({"6722", "6726", "6770", "6792", "6795", "6798", "6799"})
-_TOP_TITLES = ("ceo", "chief executive", "cfo", "chief financial", "president",
+TOP_TITLES = ("ceo", "chief executive", "cfo", "chief financial", "president",
                "chair", "coo", "chief operating")
 
 log = logging.getLogger(__name__)
@@ -105,7 +105,7 @@ def _confidence(insiders) -> float:
     titles = " ".join(o.officer_title.lower() for o in insiders if o.is_officer)
     # "president" steckt auch in "Vice President". Das ist keine oberste Führung.
     titles = titles.replace("vice president", "")
-    top = any(word in titles for word in _TOP_TITLES)
+    top = any(word in titles for word in TOP_TITLES)
     return TOP_EXECUTIVE_CONFIDENCE if top else DEFAULT_CONFIDENCE
 
 
