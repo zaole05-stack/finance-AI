@@ -31,6 +31,7 @@ Unternehmen und Nischenwerten.
 | Fonds-Experte | Positionen großer Fonds (SEC 13F). Die Daten kommen bis zu 45 Tage verzögert. **Zurückgestellt** bis nach dem Firmen-Agenten. |
 | Politik-Experte | Trades von US-Kongressmitgliedern (STOCK Act). Die Daten kommen bis zu 45 Tage verzögert. |
 | Social-Media-Experte | Posts einflussreicher Personen. Aufgeteilt in einen **Signal-Agenten** (handelt) und einen **Kontext-Agenten** (liefert nur Briefings). |
+| Devisen-Experte | Währungshandel (Bereich D). Läuft getrennt vom Aktien-Testlauf, mit eigenem Vergleichsmaßstab. Umfang noch offen. |
 | Entscheidungs-Agent | Führt alle Experten-Infos zusammen und handelt auf dem Haupt-Portfolio |
 
 ### Befugnisse
@@ -136,6 +137,9 @@ Im Team mündlich abgesprochen, hier schriftlich festgehalten:
       Begründung? Marktrelevanz von Barron Trump ist unbelegt.
 - [ ] Zugang zu Social Media ohne API (X und Truth Social)
 - [ ] Welcher Small-Cap-ETF konkret der Vergleichsmaßstab ist
+- [ ] Devisen-Experte (D): Welche Paare, welche freie Kursquelle, welcher
+      Vergleichsmaßstab und welche Kosten? Ohne Maßstab lässt sich nicht
+      sagen, ob er etwas bringt.
 - [ ] Standardwerte des Entscheidungs-Agenten bestätigen: 10 Plätze,
       91 Tage Haltedauer, Börsenwert bis 2 Mrd. USD (siehe PLAN.md, M3)
 - [ ] Abbruchregel während des Testlaufs: Umgesetzt ist nur die harte Grenze

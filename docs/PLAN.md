@@ -148,7 +148,7 @@ sobald das Budget feststeht.
 
 ## Zusammenarbeit
 
-Drei Personen, drei Bereiche. Jeder Experte liefert nur `Signal`-Objekte und
+Vier Personen, vier Bereiche. Jeder Experte liefert nur `Signal`-Objekte und
 kennt den Rest des Systems nicht. `Signal` ist damit der Vertrag zwischen den
 Bereichen. Wer wofür zuständig ist, steht auch in `.github/CODEOWNERS`.
 
@@ -157,8 +157,14 @@ Bereichen. Wer wofür zuständig ist, steht auch in `.github/CODEOWNERS`.
 | **A – Betrieb, Datenmodell (M6)** | @zaole05-stack | `core/`, `decision/`, `config/`, Einstiegspunkt (CLI, Scheduler) | Ein Befehl für Scan → Entscheidung mit gespeicherten Regeln → Kursabruf. Nachlauf über 3–6 Monate EDGAR: Wie viele Insider-Signale pro Woche bleiben nach allen Filtern übrig? |
 | **B – Insider, Auswertung, Dashboard** | @Jumikage | `experts/insider.py`, `data/sec_edgar.py`, `data/form4.py`, `evaluation/`, `dashboard/` | Atom-Feed der SEC statt Tagesindex (Signal nach Minuten statt nach einem Tag). Signale pro Woche im Dashboard. Filter anhand des Nachlaufs von A prüfen. |
 | **C – Neue Experten (M5)** | @elouanhsg | `experts/news_company.py`, `experts/news_theme.py`, `data/gdelt.py`, `data/whitehouse.py`, `data/sec_companies.py`, `experts/funds.py`, `experts/politics.py`, `data/sec_13f.py`, `data/congress.py` | Nachrichten-Experte für Firmen (GDELT, whitehouse.gov), zuerst nur gegen Fixtures. Danach der Themen-Agent, dann 13F. Politik-Experte erst, wenn die Signalmenge aus A es rechtfertigt. Siehe KONZEPT.md, Abschnitt Nachrichten-Experten. |
+| **D – Währungshandel** | @flooo13 | `experts/fx.py`, `data/fx_*.py` | Konzept für einen Devisen-Experten mit eigenem Vergleichsmaßstab, getrennt vom Aktien-Testlauf. Zuerst klären: welche Paare, welche freie Kursquelle, welcher Maßstab, welche Kosten (Spread). Code erst danach. |
 
 Social Media bekommt niemand, bis der Datenzugang geklärt ist (siehe Konzept).
+
+Währungshandel (D) läuft getrennt vom Aktien-Testlauf. Das Haupt-Portfolio,
+`decide()` und der Small-Cap-ETF als Maßstab gelten nur für Aktien. Braucht D
+Änderungen an `core/` oder `decision/` (etwa Devisenpaare in `Signal`), gilt
+Regel 1: Meldung an A.
 
 Zwischenstand von A (Beschlüsse und offene Fragen zu Testlauf, Datenmodell und
 Betrieb): [BEREICH-A.md](BEREICH-A.md).

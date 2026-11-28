@@ -35,3 +35,9 @@
 /tests/test_politics.py             @elouanhsg
 /tests/fixtures/13f/                @elouanhsg
 /tests/fixtures/congress/           @elouanhsg
+
+# D – Währungshandel
+/src/finance_ai/experts/fx.py       @flooo13
+/src/finance_ai/data/fx_*.py        @flooo13
+/tests/test_fx.py                   @flooo13
+/tests/fixtures/fx/                 @flooo13
