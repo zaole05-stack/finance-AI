@@ -156,6 +156,56 @@ eine fehlende Mail weiterhin auffällt. Inhalt, das Wichtigste oben:
 Bei einem autonomen System ist die Mail die einzige Stelle, an der jede
 Entscheidung nachgeprüft werden kann.
 
+### 7. Broker
+
+**Regel:** Am liebsten ein Broker, der die deutsche Steuer abführt. Geht das
+nicht, sind die Funktionen wichtiger. Dann erzeugt das System jedes Jahr eine
+Steuerliste aus der Datenbank (Gewinn und Verlust pro Verkauf in Euro), und
+die erste Erklärung prüft ein Steuerberater.
+
+**Kriterien:**
+
+1. offizielle API für Orders, Kontostand und Bestände, ohne TAN bei jeder Order
+2. Paper-Konto mit derselben API
+3. Konto für Wohnsitz Deutschland, reines Cash-Konto möglich
+4. Handel mit kleinen US-Werten (Nasdaq, NYSE American)
+5. niedrige Kosten pro Order und beim Währungstausch
+6. Einlagensicherung und Aufsicht in der EU oder den USA
+7. Jahresbericht, mit dem sich die Steuerliste abgleichen lässt
+
+**Prüfung vom 28.11.2026** (Quellen unten, Stand der Seiten an diesem Tag):
+
+| | Trading 212 | Interactive Brokers (Irland) | Alpaca |
+|---|---|---|---|
+| 1. API | REST mit API-Schlüssel, **Beta**. Orders sind nicht idempotent: Doppelte Anfrage, doppelte Order | nur über ein laufendes Programm (TWS oder IB Gateway). **Einmal pro Woche Anmeldung mit zweitem Faktor**, in seltenen Fällen auch zwischendurch | REST |
+| 2. Paper-Konto | ja, eigene Demo-Umgebung mit derselben API | erst nach Eröffnung und Einzahlung eines echten Kontos | ja |
+| 3. Deutschland, Cash | Konto ja. Die API gilt für „Invest“-Konten (ohne Hebel). Ob sie bei deutschen Konten freigeschaltet ist, sagt die Doku nicht | ja | **nein, nicht direkt.** In Europa nur über Partnerfirmen, Konten werden dort zunächst als Margin-Konten eröffnet |
+| 4. kleine US-Werte | Auswahl begrenzt, Abdeckung unserer Signale ungeprüft | breit | – |
+| 5. Kosten | ungeprüft | 0,005 USD je Aktie, mindestens 1 USD. Währungstausch 0,03 % | – |
+| 6. Sicherung | ungeprüft | irische Entschädigung: 90 % bis 20.000 € bei Pleite des Brokers | – |
+| 7. Steuer | laut Vergleichsportalen **seit 05.01.2026 steuereinfach** für Konten über die deutsche Einheit (FXFlat). Offizielle Seite nicht lesbar | keine deutsche Steuer, Anlage KAP selbst | – |
+
+Offene Widersprüche bei Trading 212: Eine Stelle der Doku nennt für echtes
+Geld **nur Market-Orders**, die Liste der Endpunkte führt auch Limit-Orders.
+Für kleine, wenig gehandelte Werte ist das entscheidend. Eine Market-Order
+ohne Preisgrenze kann dort weit vom letzten Kurs ausgeführt werden.
+
+**Stand:** Alpaca fällt weg. Trading 212 wäre der einzige Kandidat, der
+Steuer und API verbindet, mit drei offenen Punkten: API bei deutschen
+Konten, Limit-Orders im echten Handel, Abdeckung unserer Signale.
+Interactive Brokers bleibt die Alternative mit breiter Abdeckung, kostet aber
+eine Anmeldung pro Woche und die Steuer von Hand.
+
+Quellen: [Trading 212 API-Doku](https://docs.trading212.com/api.md),
+[Trading 212 API-Grenzen](https://docs.trading212.com/api/section/general-information/api-limitations),
+[Rankia zu Trading 212 und Steuern](https://rankia.de/trading-212-steuern/),
+[IBKR Neuanmeldung](https://www.interactivebrokers.com/docs/third-party-integrations/tws-settings/daily-weekly-reauthentication),
+[IBKR Paper-Konto](https://www.interactivebrokers.com/campus/trading-lessons/so-verwenden-sie-das-paper-trading-konto-von-ibkr/),
+[IBKR Irland Anlegerschutz](https://www.interactivebrokers.com/support/faq/content/126537062),
+[IBKR Gebühren](https://www.interactivebrokers.com/en/pricing/commissions-stocks.php),
+[Alpaca Europe Kontoeröffnung](https://docs.alpaca.markets/eu/docs/account-opening),
+[Business Wire zu Alpaca Europe](https://www.businesswire.com/news/home/20260421441080/en/Alpaca-Expands-into-Europe-with-WealthKernel-Acquisition-and-Launch-of-European-Equities-Trading)
+
 ## Was sich im KONZEPT ändert
 
 | KONZEPT heute | Neu |
@@ -170,8 +220,9 @@ Entscheidung nachgeprüft werden kann.
 
 ### Vor dem Paper-Konto
 
-- [ ] Welcher Broker, mit welcher API? Geht ein eigenes Konto mit API-Handel
-      von Deutschland aus, und wie werden die Steuern abgeführt?
+- [ ] Broker: Trading 212 oder Interactive Brokers (Abschnitt 7). Offen sind
+      die API bei deutschen Konten, Limit-Orders im echten Handel und die
+      Abdeckung unserer Signale.
 - [x] Dauer des Tests auf dem Paper-Konto und messbare Bestehenskriterien (Abschnitt 3)
 - [x] Benachrichtigung: Kanal, Stufen, Inhalt des täglichen Updates (Abschnitt 6)
 
