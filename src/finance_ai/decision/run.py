@@ -73,6 +73,12 @@ def run_test_run(
         )
     if at < run.started_at:
         raise ValueError(f"Testlauf {run.id} beginnt erst {run.started_at.isoformat()}")
+    if run.settings.rules.max_market_cap is not None and market_cap is None:
+        # Ohne Abfrage prüft decide() den Börsenwert nicht. Der Testlauf liefe
+        # dann still ohne die eingefrorene Grenze.
+        raise ValueError(
+            f"Testlauf {run.id} hat eine Börsenwert-Grenze, aber keine Börsenwert-Abfrage"
+        )
     portfolios = [(run.portfolio(spec), spec) for spec in run.portfolios]
     return _decide_all(
         conn, at, prices, portfolios, run.settings.rules, market_cap, since=run.started_at

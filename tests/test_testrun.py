@@ -249,3 +249,13 @@ def test_fingerprint_ignores_key_order():
     reordered = dict(reversed(list(rules.items())))
     assert regelwerk.fingerprint(reordered) == regelwerk.fingerprint(rules)
     assert regelwerk.fingerprint({**rules, "Routine": {}}) != regelwerk.fingerprint(rules)
+
+
+def test_run_with_market_cap_limit_needs_a_lookup(conn):
+    limited = Settings(rules=replace(RULES, max_market_cap=D("2000000000")))
+    run = make_run(conn, settings=limited)
+    storage.save_signal(conn, sig("AAA"))
+    with pytest.raises(ValueError, match="Börsenwert-Abfrage"):
+        run_test_run(conn, run, T0, PRICES)
+    (main, *_) = run_test_run(conn, run, T0, PRICES, market_cap=lambda _: D("3000000000"))
+    assert main.orders == []
