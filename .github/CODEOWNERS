@@ -19,6 +19,14 @@
 /tests/fixtures/edgar/              @Jumikage
 
 # C – Neue Experten (M5)
+/src/finance_ai/experts/news_company.py @elouanhsg
+/src/finance_ai/experts/news_theme.py   @elouanhsg
+/src/finance_ai/data/gdelt.py           @elouanhsg
+/src/finance_ai/data/whitehouse.py      @elouanhsg
+/src/finance_ai/data/sec_companies.py   @elouanhsg
+/tests/test_news_company.py             @elouanhsg
+/tests/test_news_theme.py               @elouanhsg
+/tests/fixtures/news/                   @elouanhsg
 /src/finance_ai/experts/funds.py    @elouanhsg
 /src/finance_ai/experts/politics.py @elouanhsg
 /src/finance_ai/data/sec_13f.py     @elouanhsg
@@ -27,3 +35,9 @@
 /tests/test_politics.py             @elouanhsg
 /tests/fixtures/13f/                @elouanhsg
 /tests/fixtures/congress/           @elouanhsg
+
+# D – Währungshandel
+/src/finance_ai/experts/fx.py       @flooo13
+/src/finance_ai/data/fx_*.py        @flooo13
+/tests/test_fx.py                   @flooo13
+/tests/fixtures/fx/                 @flooo13

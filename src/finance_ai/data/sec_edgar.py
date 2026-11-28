@@ -11,21 +11,39 @@ Die SEC verlangt einen User-Agent mit Kontaktangabe und höchstens
 Der Tagesindex erscheint erst nach Tagesende. Signale kommen damit bis zu einen
 Tag nach der Veröffentlichung. Das zeigt sich ehrlich im Abstand zwischen
 `observed_at` und `created_at` jedes Signals.
+
+Schneller geht es über den Atom-Feed der neuesten Meldungen (`getcurrent`).
+Er zeigt eine Meldung Minuten nach der Annahme. Zwei Eigenheiten des Feeds:
+- `type=4` filtert nur nach Präfix. Der Feed enthält deshalb auch 424B2, 425,
+  40-F/A usw. Gezählt wird nur der Formtyp genau `4`.
+- Jede Meldung steht mehrfach im Feed, einmal als Emittent (Issuer) und einmal
+  je meldender Person (Reporting). Verwendet wird die CIK des Emittenten.
 """
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 import urllib.error
 import urllib.request
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 ARCHIVES = "https://www.sec.gov/Archives/"
+CURRENT_FEED = "https://www.sec.gov/cgi-bin/browse-edgar"
 EASTERN = ZoneInfo("America/New_York")
 MIN_INTERVAL_SECONDS = 0.125
+FEED_PAGE_SIZE = 100
+FEED_MAX_PAGES = 30
+
+_ATOM = {"a": "http://www.w3.org/2005/Atom"}
+_FEED_TITLE = re.compile(r"\((\d{10})\) \((\w+)\)\s*$")
+_FEED_ID = re.compile(r"accession-number=(\d{10}-\d{2}-\d{6})")
+
+log = logging.getLogger(__name__)
 
 _ACCEPTANCE = re.compile(r"<ACCEPTANCE-DATETIME>(\d{14})")
 _XML = re.compile(r"<XML>\s*(.*?)\s*</XML>", re.DOTALL)
@@ -172,3 +190,90 @@ def form4_filings(client: EdgarClient, day: date) -> list[FilingRef]:
 def fetch_filing(client: EdgarClient, ref: FilingRef) -> Filing | None:
     text = client.get(ref.txt_url)
     return parse_submission(ref, text) if text else None
+
+
+@dataclass(frozen=True, slots=True)
+class FeedEntry:
+    """Eine Form-4-Meldung aus dem Atom-Feed, mit dem Zeitpunkt des Eintrags."""
+
+    ref: FilingRef
+    updated: datetime
+
+
+def current_feed_url(start: int = 0, count: int = FEED_PAGE_SIZE) -> str:
+    return (
+        f"{CURRENT_FEED}?action=getcurrent&type=4&owner=include"
+        f"&count={count}&start={start}&output=atom"
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class FeedPage:
+    """Eine Seite des Atom-Feeds."""
+
+    entries: list[FeedEntry]  # nur Form 4, je Meldung einmal, neueste zuerst
+    size: int  # alle Einträge der Seite, auch andere Formtypen
+    oldest: datetime | None  # ältester Eintrag der Seite, gleich welcher Formtyp
+
+
+def parse_current_feed(text: str) -> FeedPage:
+    """Liest eine Seite des Atom-Feeds der neuesten Meldungen."""
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError as error:
+        raise ValueError(f"Atom-Feed nicht lesbar: {error}") from error
+    raw = root.findall("a:entry", _ATOM)
+    entries: dict[str, FeedEntry] = {}
+    issuer_seen: set[str] = set()
+    oldest: datetime | None = None
+    for entry in raw:
+        stamp = entry.findtext("a:updated", "", _ATOM)
+        if not stamp:
+            continue
+        updated = datetime.fromisoformat(stamp)
+        oldest = updated if oldest is None else min(oldest, updated)
+        category = entry.find("a:category", _ATOM)
+        if category is None or category.get("term") != "4":
+            continue
+        title = _FEED_TITLE.search(entry.findtext("a:title", "", _ATOM))
+        accession = _FEED_ID.search(entry.findtext("a:id", "", _ATOM))
+        if title is None or accession is None:
+            continue
+        cik, role = title.group(1), title.group(2)
+        number = accession.group(1)
+        # Erster Eintrag gewinnt, ein späterer Issuer-Eintrag ersetzt aber eine Person.
+        if number in entries and (role != "Issuer" or number in issuer_seen):
+            continue
+        if role == "Issuer":
+            issuer_seen.add(number)
+        ref = FilingRef(number, cik, f"edgar/data/{int(cik)}/{number}.txt")
+        entries[number] = FeedEntry(ref, updated)
+    return FeedPage(list(entries.values()), len(raw), oldest)
+
+
+def recent_form4_filings(
+    client: EdgarClient,
+    since: datetime,
+    max_pages: int = FEED_MAX_PAGES,
+    page_size: int = FEED_PAGE_SIZE,
+) -> list[FilingRef]:
+    """Form-4-Meldungen aus dem Atom-Feed, die seit `since` eingegangen sind.
+
+    Blättert, bis ein Eintrag älter als `since` ist oder der Feed endet. Der
+    Feed reicht nur etwa einen Geschäftstag zurück. Für ältere Tage bleibt der
+    Tagesindex (`form4_filings`).
+    """
+    refs: dict[str, FilingRef] = {}
+    for page in range(max_pages):
+        text = client.get(current_feed_url(start=page * page_size, count=page_size))
+        if not text:
+            break
+        feed = parse_current_feed(text)
+        for entry in feed.entries:
+            if entry.updated >= since:
+                refs.setdefault(entry.ref.accession, entry.ref)
+        if feed.size < page_size or (feed.oldest is not None and feed.oldest < since):
+            break
+    else:
+        log.warning("Atom-Feed nach %d Seiten nicht bis %s gelesen", max_pages, since)
+    return list(refs.values())

@@ -1,6 +1,6 @@
 # finance-AI – Konzept
 
-Stand: 2026-11-25 · Ergebnis von zwei Grill-Sessions (21. und 25.11.2026)
+Stand: 2026-11-26 · Ergebnis von drei Grill-Sessions (21., 25. und 26.11.2026)
 
 ## Idee
 
@@ -26,9 +26,12 @@ Unternehmen und Nischenwerten.
 | Agent | Aufgabe |
 |---|---|
 | Insider-Experte | Käufe von Vorständen, Aufsichtsräten und Großaktionären über 10 % (SEC Form 4, Directors' Dealings) |
-| Fonds-Experte | Positionen großer Fonds (SEC 13F). Die Daten kommen bis zu 45 Tage verzögert. |
+| Nachrichten-Experte: Firmen | Wertet Nachrichten und Reden aus, die eine Firma ausdrücklich nennen. Quellen: GDELT und offizielle Mitschriften (whitehouse.gov). Erzeugt Kauf- und Verkaufssignale. |
+| Nachrichten-Experte: Themen | Schließt von einem Thema einer Nachricht (z. B. Kernkraft-Förderung) auf passende kleine Firmen. Wählt **nur** aus der SEC-Firmenliste (Branchencode SIC) und belegt jede Wahl mit einer Stelle aus dem 10-K. |
+| Fonds-Experte | Positionen großer Fonds (SEC 13F). Die Daten kommen bis zu 45 Tage verzögert. **Zurückgestellt** bis nach dem Firmen-Agenten. |
 | Politik-Experte | Trades von US-Kongressmitgliedern (STOCK Act). Die Daten kommen bis zu 45 Tage verzögert. |
 | Social-Media-Experte | Posts einflussreicher Personen. Aufgeteilt in einen **Signal-Agenten** (handelt) und einen **Kontext-Agenten** (liefert nur Briefings). |
+| Devisen-Experte | Währungshandel (Bereich D). Läuft getrennt vom Aktien-Testlauf, mit eigenem Vergleichsmaßstab. Umfang noch offen. |
 | Entscheidungs-Agent | Führt alle Experten-Infos zusammen und handelt auf dem Haupt-Portfolio |
 
 ### Befugnisse
@@ -66,6 +69,26 @@ Unternehmen und Nischenwerten.
 | ≥ 5 % besser | Start mit echtem Geld, zunächst nur mit kleinem Betrag |
 | 0–5 % besser | Paper Trading um 6 Monate verlängern |
 | schlechter | Agent einstellen |
+
+### Nachrichten-Experten (Absprache vom 26.11.2026)
+
+Im Team mündlich abgesprochen, hier schriftlich festgehalten:
+
+- Bereich C baut zuerst den **Firmen-Agenten**, danach den **Themen-Agenten**.
+  Der Fonds-Experte (13F) kommt danach.
+- Quellen: **GDELT** (kostenlos, offizielle API, alle 15 Minuten aktualisiert)
+  und **offizielle Mitschriften** (whitehouse.gov, Behörden, per RSS).
+  X und Truth Social bleiben eine Idee für später, solange der Datenzugang
+  nicht geklärt ist.
+- Ein günstiger Vorfilter ohne LLM (Firmenname aus der SEC-Liste oder feste
+  Themenliste) entscheidet, welche Artikel das LLM überhaupt liest.
+- Jeder LLM-Aufruf läuft über eine Stelle mit einstellbarer Kostengrenze. In
+  Tests gibt das LLM feste Antworten.
+- Verkaufssignale werden erzeugt, aber vorerst nur protokolliert, weil der
+  Entscheidungs-Agent nur Käufe handelt.
+- **Prüfung Firmen-Agent:** Ein echter vergangener GDELT-Artikel, der eine
+  kleine US-Firma nennt, ergibt als Fixture genau das erwartete Signal mit
+  Quellenlink. Ein Artikel ohne passende Firma ergibt kein Signal.
 
 ### Datenzugang
 
@@ -105,10 +128,18 @@ Unternehmen und Nischenwerten.
 
 - [ ] Monatliches Kostenbudget für LLM-Aufrufe. Das ist die einzige API, die sich
       nicht vermeiden lässt, wenn die Agenten KI-gestützt arbeiten sollen.
+      Die Nachrichten-Experten brauchen es als Erste.
+- [ ] Themen-Agent: Ist die SEC-Firmenliste (SIC und 10-K) die richtige Quelle
+      für die Zuordnung Thema → Firma? Noch einmal überdenken.
+- [ ] Zwei neue Nachrichten-Experten heißen weniger Trades pro Experte. Reicht
+      das in 6 Monaten für eine belastbare Messung?
 - [ ] Beobachtungsliste für Social Media: Wer kommt drauf, und mit welcher
       Begründung? Marktrelevanz von Barron Trump ist unbelegt.
 - [ ] Zugang zu Social Media ohne API (X und Truth Social)
 - [ ] Welcher Small-Cap-ETF konkret der Vergleichsmaßstab ist
+- [ ] Devisen-Experte (D): Welche Paare, welche freie Kursquelle, welcher
+      Vergleichsmaßstab und welche Kosten? Ohne Maßstab lässt sich nicht
+      sagen, ob er etwas bringt.
 - [ ] Standardwerte des Entscheidungs-Agenten bestätigen: 10 Plätze,
       91 Tage Haltedauer, Börsenwert bis 2 Mrd. USD (siehe PLAN.md, M3)
 - [ ] Abbruchregel während des Testlaufs: Umgesetzt ist nur die harte Grenze

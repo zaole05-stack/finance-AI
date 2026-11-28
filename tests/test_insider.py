@@ -12,9 +12,12 @@ from finance_ai.data.form4 import parse_form4
 from finance_ai.data.sec_edgar import (
     EdgarClient,
     FilingRef,
+    current_feed_url,
     daily_index_url,
+    parse_current_feed,
     parse_form4_index,
     parse_submission,
+    recent_form4_filings,
 )
 from finance_ai.experts import insider
 
@@ -277,6 +280,162 @@ def test_funds_reits_and_spacs_give_no_signal(sic):
     from dataclasses import replace
 
     assert insider.signal_from_filing(replace(filing(ALDX), issuer_sic=sic), LATER) is None
+
+
+# --- Atom-Feed der neuesten Meldungen -------------------------------------
+#
+# current_form4_20261126.atom ist ein unveränderter Ausschnitt des echten Feeds
+# (abgerufen am 26.11.2026, Einträge vom 25.11.2026 17:24–17:29 New York).
+# Er enthält 20 Einträge: 4 Form-4-Meldungen in 10 Einträgen, dazu 424B2,
+# 424B5 und 425, die über den Präfix-Filter type=4 mit hineinrutschen.
+
+FEED = FIXTURES / "current_form4_20261126.atom"
+NEPTUNE = "0001628280-26-076022"
+PIMCO = "0001510281-26-000477"
+COVENANT = "0001008886-26-000256"
+
+
+def feed_page():
+    return parse_current_feed(FEED.read_text(encoding="utf-8"))
+
+
+def eastern(text):
+    return datetime.fromisoformat(text)
+
+
+def test_feed_keeps_only_form4_once_per_filing():
+    page = feed_page()
+    assert page.size == 20
+    assert [e.ref.accession for e in page.entries] == [NEPTUNE, PIMCO, COVENANT]
+    assert page.oldest == eastern("2026-11-25T17:24:58-05:00")
+
+
+def test_feed_prefers_issuer_cik():
+    refs = {e.ref.accession: e.ref for e in feed_page().entries}
+    # Bei Covenant stehen die meldenden Personen vor dem Emittenten im Feed.
+    assert refs[COVENANT].cik == "0000928658"
+    assert refs[COVENANT].index_url == (
+        "https://www.sec.gov/Archives/edgar/data/928658/000100888626000256/"
+        f"{COVENANT}-index.htm"
+    )
+    assert refs[COVENANT].txt_url == (
+        f"https://www.sec.gov/Archives/edgar/data/928658/{COVENANT}.txt"
+    )
+    assert refs[NEPTUNE].cik == "0002067129"
+
+
+def test_feed_entry_time_keeps_offset():
+    entry = feed_page().entries[0]
+    assert entry.updated.astimezone(UTC) == datetime(2026, 11, 25, 22, 27, 15, tzinfo=UTC)
+
+
+def test_feed_rejects_broken_xml():
+    with pytest.raises(ValueError, match="Atom-Feed"):
+        parse_current_feed("<feed")
+
+
+def test_current_feed_url():
+    assert current_feed_url(start=200, count=20) == (
+        "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=4"
+        "&owner=include&count=20&start=200&output=atom"
+    )
+
+
+class FeedClient:
+    """Liefert vorgegebene Feed-Seiten der Reihe nach und Meldungen aus den Fixtures."""
+
+    def __init__(self, *pages):
+        self.pages = list(pages)
+        self.urls = []
+
+    def get(self, url):
+        self.urls.append(url)
+        if "getcurrent" in url:
+            return self.pages.pop(0) if self.pages else None
+        return (FIXTURES / url.rsplit("/", 1)[-1]).read_text(encoding="utf-8")
+
+
+def test_recent_filings_stop_at_since():
+    client = FeedClient(FEED.read_text(encoding="utf-8"))
+    refs = recent_form4_filings(client, since=eastern("2026-11-25T17:25:00-05:00"))
+    assert [r.accession for r in refs] == [NEPTUNE, PIMCO]
+    assert len(client.urls) == 1
+
+
+def test_recent_filings_page_until_since():
+    # Bei Seitengröße 20 ist der Ausschnitt eine volle Seite. Er reicht nicht
+    # bis `since`, also wird die nächste Seite geladen.
+    older = constructed_feed(
+        (ALDX, "0001341235", "Issuer", "2026-11-25T17:20:00-05:00"),
+        (CBK, "0001981546", "Issuer", "2026-11-25T16:00:00-05:00"),
+    )
+    client = FeedClient(FEED.read_text(encoding="utf-8"), older)
+    refs = recent_form4_filings(
+        client, since=eastern("2026-11-25T17:00:00-05:00"), page_size=20
+    )
+    assert [r.accession for r in refs] == [NEPTUNE, PIMCO, COVENANT, ALDX]
+    assert "start=20" in client.urls[1]
+
+
+def test_recent_filings_respect_max_pages():
+    page = FEED.read_text(encoding="utf-8")
+    client = FeedClient(page, page, page)
+    recent_form4_filings(client, since=eastern("2026-11-24T00:00:00-05:00"),
+                         max_pages=2, page_size=20)
+    assert len(client.urls) == 2
+
+
+def constructed_feed(*entries):
+    """Feed im Format des echten Feeds, aus Meldungen, die als Fixture vorliegen."""
+    body = "".join(
+        f"""<entry>
+<title>4 - Firma ({cik}) ({role})</title>
+<link rel="alternate" type="text/html" href="https://www.sec.gov/Archives/edgar/data/{int(cik)}/{acc.replace('-', '')}/{acc}-index.htm"/>
+<updated>{updated}</updated>
+<category scheme="https://www.sec.gov/" label="form type" term="4"/>
+<id>urn:tag:sec.gov,2008:accession-number={acc}</id>
+</entry>"""
+        for acc, cik, role, updated in entries
+    )
+    return (
+        '<?xml version="1.0" encoding="ISO-8859-1" ?>\n'
+        f'<feed xmlns="http://www.w3.org/2005/Atom">{body}</feed>'
+    )
+
+
+def test_scan_recent_finds_known_purchase_minutes_after_filing():
+    """Über den Feed entsteht dasselbe Signal wie über den Tagesindex."""
+    feed = constructed_feed(
+        (ALDX, "0001579179", "Reporting", "2026-11-24T06:58:32-05:00"),
+        (ALDX, "0001341235", "Issuer", "2026-11-24T06:58:32-05:00"),
+        (CBK, "0001981546", "Issuer", "2026-11-24T06:40:00-05:00"),
+    )
+    client = FeedClient(feed)
+    minutes_later = datetime(2026, 11, 24, 12, 5, tzinfo=UTC)
+    signals = insider.scan_recent(
+        client, since=eastern("2026-11-24T06:00:00-05:00"), clock=lambda: minutes_later
+    )
+    assert [s.ticker for s in signals] == ["ALDX"]
+    assert signals[0].id == f"insider:{ALDX}"
+    assert signals[0].created_at - signals[0].observed_at < timedelta(minutes=10)
+    assert len(client.urls) == 1 + 2  # eine Feed-Seite, dann jede Meldung einmal
+
+
+def test_scan_recent_without_feed_gives_nothing():
+    assert insider.scan_recent(FeedClient(), since=LATER) == []
+
+
+@pytest.mark.network
+def test_live_current_feed():
+    from finance_ai.config import MissingSetting, sec_user_agent
+
+    try:
+        client = EdgarClient(sec_user_agent())
+    except MissingSetting as error:
+        pytest.skip(str(error))
+    page = parse_current_feed(client.get(current_feed_url(count=40)) or "")
+    assert page.size > 0
+    assert all(e.ref.accession for e in page.entries)
 
 
 def test_confidence_ranks_top_executives_higher():
