@@ -69,7 +69,13 @@ Bevor Schritt 6 rechnet, braucht es eine Entscheidung im Team. Sie muss fallen,
 ohne dass jemand Renditen gesehen hat:
 
 1. **Bessere Kursquelle mit delisteten Aktien.** Am saubersten wäre CRSP über
-   WRDS. Ob die HWR Zugang hat, ist offen. Andere Hochschulen regeln das über
+   WRDS. Die [Datenbankliste der HWR](https://www.hwr-berlin.de/en/hwr-berlin/service-units/hwr-berlin-library/literature-research/online-databases/)
+   führt (Stand 2026-11-28) weder WRDS noch CRSP, Compustat, LSEG Workspace
+   oder Bloomberg. Für Finanzdaten gibt es nur Macrobond, und das enthält
+   keine Aktienkurse. Die FU Berlin lizenziert WRDS (Compustat, BoardEx,
+   Orbis), führt CRSP aber nicht auf
+   ([FU-Bibliothek](https://www.wiwiss.fu-berlin.de/bibliothek/02literaturrecherche/Faktendatenbanken/index.html)).
+   Offen ist, ob ein Lehrstuhl der HWR einen eigenen Zugang hat. Andere Hochschulen regeln das über
    die Bibliothek oder den Lehrstuhl, etwa
    [Mannheim](https://www.bib.uni-mannheim.de/en/subject-specific-research/business-studies/company-and-finance-databases)
    und [Hamburg](https://www.bwl.uni-hamburg.de/en/finance/forschung/data.html).
