@@ -17,6 +17,20 @@
 /tests/test_insider.py              @Jumikage
 /tests/test_dashboard.py            @Jumikage
 /tests/fixtures/edgar/              @Jumikage
+/src/finance_ai/data/sec_company.py            @Jumikage
+/src/finance_ai/data/sec_insider_datasets.py   @Jumikage
+/tests/test_backtest*.py                       @Jumikage
+/tests/test_measure.py                         @Jumikage
+/tests/test_data_check.py                      @Jumikage
+/tests/test_sec_company.py                     @Jumikage
+/tests/test_insider_datasets.py                @Jumikage
+/tests/fixtures/insider_datasets/              @Jumikage
+/tests/fixtures/sec_company/                   @Jumikage
+/docs/plans/2026-11-26-insider-backtest.md     @Jumikage
+/docs/plans/2026-11-2*-datencheck-*.md         @Jumikage
+# Geteilt: A betreibt die Kursquellen, B nutzt sie im Backtest.
+/src/finance_ai/paper_trading/daily_prices.py  @zaole05-stack @Jumikage
+/tests/test_daily_prices.py                    @zaole05-stack @Jumikage
 
 # C – Neue Experten (M5)
 /src/finance_ai/experts/news_company.py @elouanhsg

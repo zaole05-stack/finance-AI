@@ -188,8 +188,8 @@ fehlschlägt, dann die kleinste Umsetzung, dann aufräumen.
 ### 0. Vorher
 
 - [x] Atom-Feed-Arbeit committet und gepusht (`feat/insider-atom-feed`).
-- [ ] PR für den Atom-Feed öffnen.
-- [ ] `.env` mit `SEC_USER_AGENT` anlegen (Name und E-Mail). Ohne sie lehnt die
+- [x] PR für den Atom-Feed öffnen (#12, gemergt).
+- [x] `.env` mit `SEC_USER_AGENT` anlegen (Name und E-Mail). Ohne sie lehnt die
       SEC automatische Downloads ab.
 - [x] Branch `feat/insider-backtest` von aktuellem `main`.
 - [x] `/data/` in `.gitignore`.
@@ -235,8 +235,10 @@ fehlschlägt, dann die kleinste Umsetzung, dann aufräumen.
 - [x] Ereignisse je Firma für Schritt 4: Delisting (25, 25-NSE, 15-…),
       Übernahme (DEFM14A, SC TO-T, SC 14D9 …), Insolvenz (8-K Punkt 1.03).
       S-4 und 425 zählen nicht, die reicht oft der Käufer ein.
-- [ ] Aktienzahl gilt vor späteren Splits: Börsenwert mit dem damaligen,
-      nicht split-bereinigten Kurs rechnen (Schritt 4).
+- [x] Aktienzahl gilt vor späteren Splits: Börsenwert mit dem damaligen,
+      nicht split-bereinigten Kurs rechnen (Schritt 4). `_market_cap` nimmt
+      `raw_close` (Split-Bereinigung zurückgerechnet), ohne Kurs den
+      gemeldeten Kaufpreis.
 - [x] XBRL-Aktienzahlen gibt es erst ab 2010 (große) bzw. Mitte 2011 (kleine
       Firmen). Entschieden: 2006 bis Mitte 2011 läuft als Stresstest ohne
       Börsenwert-Grenze und zählt nicht fürs Urteil (siehe „Zeitraum“).
@@ -264,14 +266,14 @@ Schritte 5–9 beginnen erst, wenn dieser Check bestanden ist. Er braucht das
 Regelwerk noch nicht. Anleitung zum Ausführen:
 [2026-11-26-datencheck-uebergabe.md](2026-11-26-datencheck-uebergabe.md).
 
-- [ ] Insider-Grundregeln für **2008** (Finanzkrise, härtester Fall, aus dem
+- [x] Insider-Grundregeln für **2008** (Finanzkrise, härtester Fall, aus dem
       Stresstest) und **2015** (ruhiges Jahr, aus dem Urteilsabschnitt).
-- [ ] Gemessen wird nur die Datenqualität, **keine Renditen**:
+- [x] Gemessen wird nur die Datenqualität, **keine Renditen**:
   - Signale pro Woche und pro Jahr;
   - Anteil mit Kurs;
   - Anteil, der erst über das heutige Kürzel gefunden wird;
   - Anteil ohne Kurs, aufgeteilt nach den fünf Fällen aus „Methode“.
-- [ ] Entscheidung nach dem Anteil, der in der mittleren Stufe mit −55 %
+- [x] Entscheidung nach dem Anteil, der in der mittleren Stufe mit −55 %
       eingeht (Pleite, Grund unbekannt, keine Meldung), im schlechteren der
       beiden Jahre:
 
@@ -284,6 +286,10 @@ Regelwerk noch nicht. Anleitung zum Ausführen:
 Grund für die Schwellen: Der Anteil *p*, der mit −55 % eingeht, verschiebt den
 mittleren Vorsprung um etwa 0,55 × *p*. Bei 10 % sind das rund 5,5 Punkte.
 Mehr sollte die Annahme nicht bewegen, sonst entscheidet sie statt des Signals.
+
+  Ergebnis: 4,4 % (2008) und 3,3 % (2015) gehen mit −55 % ein, also
+  „weiter“. Die eigentliche Lücke sind aber die wegfallenden Signale, siehe
+  [Befunde](2026-11-28-datencheck-befunde.md), Abschnitt 1.
 
 - [ ] Ergebnis an A geben. Die Signale pro Woche beantworten A's Frage aus
       BEREICH-A.md, Punkt 4: Füllen sich die Plätze überhaupt?
@@ -401,7 +407,8 @@ Der volle Lauf ist noch nicht gestartet.
 
 ### 10. Abschluss
 
-- [ ] CODEOWNERS: neue Dateien unter B eintragen.
+- [x] CODEOWNERS: neue Dateien unter B eintragen. `daily_prices.py` gemeinsam
+      mit A, weil A die Kursquellen betreibt.
 - [ ] Voller Lauf, sobald das Regelwerk feststeht.
 - [ ] PR mit Bericht. Reviewer: A, weil CODEOWNERS und `docs/` betroffen sind.
 - [ ] Ergebnis und Folge (Tabelle oben) im Team besprechen. `KONZEPT.md` und
