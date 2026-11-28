@@ -172,3 +172,26 @@ def test_quarters_cover_the_whole_period():
     q = runs._quarters(regelwerk())
     assert min(q) == "2006q1" and "2026q3" in q and "2026q4" not in q
     assert len(q) == 4 * 20 + 3
+
+
+def test_coverage_counts_measurable_by_section_and_size_without_returns():
+    from finance_ai.data.sec_company import MissingPrice
+    from finance_ai.evaluation.backtest import SignalStatus
+
+    gone = replace(bsignal(status=SignalStatus.NO_PRICE, case=MissingPrice.BANKRUPTCY, cap=D("20000000")),
+                   later_bankruptcy=True)
+    signals = [
+        bsignal(cap=D("20000000")),
+        gone,
+        replace(bsignal(cap=D("1000000000")), later_takeover=True),
+        bsignal(cap=D("5000000000")),  # über der Grenze: nicht im Zielsegment
+        bsignal(section=Section.STRESS, cap=None),
+    ]
+    c = runs.coverage(signals, regelwerk())
+    assert c["Abschnitte"]["Urteil"] == {"messbar": 3, "ohne Kurs": 1, "Anteil messbar": 0.75}
+    assert c["Zielsegment"]["messbar"] == 2 and c["Zielsegment"]["ohne Kurs"] == 1
+    assert c["Klassen"]["unter 50 Mio. USD"]["Anteil messbar"] == 0.5
+    assert c["Klassen"]["300 Mio. USD bis Grenze"]["messbar"] == 1
+    assert c["Vergleich"]["weggefallen"] == {"Anzahl": 1, "später Insolvenz": 1.0, "später Übernahme": 0.0}
+    # Zielsegment plus Stresstest: 3 messbare, davon 1 später übernommen.
+    assert c["Vergleich"]["messbar"]["später Übernahme"] == 0.3333

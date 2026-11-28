@@ -148,3 +148,13 @@ def test_build_signals_skips_unknown_companies_and_counts_them():
     result = bt.build_signals(filings, {"1": company("1")}.get, FakePrices(), HOLD, NOW)
     assert [s.signal.id for s in result.signals] == ["insider:0000000000-15-000001"]
     assert result.no_company == 1
+
+
+def test_signal_knows_later_bankruptcy_and_takeover_for_the_report():
+    info = company(
+        shares=[shares(date(2015, 2, 1), date(2014, 12, 31))],
+        events=[Event(date(2014, 1, 1), "8-K 1.03"), Event(date(2019, 5, 1), "DEFM14A")],
+    )
+    s = classify(filing(), info, FakePrices(closes={DAY: D("12")}))
+    # Nur Meldungen nach dem Meldetag zählen; die Insolvenz 2014 lag davor.
+    assert (s.later_bankruptcy, s.later_takeover) == (False, True)

@@ -34,7 +34,7 @@ from enum import Enum
 from typing import Protocol
 
 from finance_ai.core.models import Signal
-from finance_ai.data.sec_company import CompanyInfo, MissingPrice
+from finance_ai.data.sec_company import BANKRUPTCY_FORM, TAKEOVER_FORMS, CompanyInfo, MissingPrice
 from finance_ai.data.sec_insider_datasets import DatasetFiling
 from finance_ai.experts import insider
 from finance_ai.paper_trading.daily_prices import (
@@ -111,6 +111,10 @@ class BacktestSignal:
     missing_case: MissingPrice | None
     # Gewichteter gemeldeter Kaufpreis: Einstieg für die festen Werte ohne Kurs.
     reported_price: Decimal | None = None
+    # Für den Bericht: Wie unterscheiden sich messbare und weggefallene Signale?
+    # Nutzt spätere Daten, nur zur Beschreibung, nie zur Auswahl.
+    later_bankruptcy: bool = False
+    later_takeover: bool = False
 
 
 @dataclass
@@ -174,6 +178,7 @@ def classify(
         return None
     outcome = price_outcome(filing, info, prices, holding)
     cap, cap_source = _market_cap(filing, info, prices, outcome.check)
+    later = {e.form for e in info.events if e.day > filing.filing_date}
 
     if outcome.check.status is PriceStatus.MISMATCH:
         status = SignalStatus.MISMATCH
@@ -195,6 +200,8 @@ def classify(
         market_cap_source=cap_source,
         missing_case=outcome.missing_case,
         reported_price=_reported_price(filing),
+        later_bankruptcy=BANKRUPTCY_FORM in later,
+        later_takeover=bool(later & TAKEOVER_FORMS),
     )
 
 

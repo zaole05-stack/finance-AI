@@ -160,9 +160,74 @@ def _windows(results: Sequence[m.WindowResult]) -> tuple[dict, m.Summary]:
     )
 
 
+def _in_part(s: bt.BacktestSignal, section: bt.Section, name: str) -> bool:
+    if s.section is not section:
+        return False
+    if name.endswith("2011–2018"):
+        return s.filing_date < m.HALF_SPLIT
+    if name.endswith("2019–2026"):
+        return s.filing_date >= m.HALF_SPLIT
+    return True
+
+
+CAP_CLASSES = (Decimal("50000000"), Decimal("300000000"))
+
+
+def _cap_class(cap: Decimal, limit: Decimal | None) -> str:
+    if cap < CAP_CLASSES[0]:
+        return "unter 50 Mio. USD"
+    if cap < CAP_CLASSES[1]:
+        return "50–300 Mio. USD"
+    return "300 Mio. USD bis Grenze" if limit is not None else "ab 300 Mio. USD"
+
+
+def _group(signals: Sequence[bt.BacktestSignal]) -> dict:
+    measurable = [s for s in signals if s.status is bt.SignalStatus.OK]
+    dropped = [s for s in signals if s.status in (bt.SignalStatus.NO_PRICE, bt.SignalStatus.MISMATCH)]
+    n = len(measurable) + len(dropped)
+    return {"messbar": len(measurable), "ohne Kurs": len(dropped),
+            "Anteil messbar": round(len(measurable) / n, 4) if n else None}
+
+
+def _later(signals: Sequence[bt.BacktestSignal]) -> dict:
+    n = len(signals)
+    return {
+        "Anzahl": n,
+        "später Insolvenz": round(sum(s.later_bankruptcy for s in signals) / n, 4) if n else None,
+        "später Übernahme": round(sum(s.later_takeover for s in signals) / n, 4) if n else None,
+    }
+
+
+def coverage(signals: Sequence[bt.BacktestSignal], r: Regelwerk) -> dict:
+    """Wie viele Signale messbar sind und wie sich die Weggefallenen unterscheiden. Keine Renditen."""
+    limit = r.rules.max_market_cap
+    candidates = [s for s in signals if s.signal.confidence >= r.rules.min_confidence]
+    by_section = {sec.value: _group([s for s in candidates if s.section is sec]) for sec in bt.Section}
+    target = [
+        s for s in candidates
+        if s.section is bt.Section.VERDICT and s.market_cap is not None
+        and (limit is None or s.market_cap <= limit)
+    ]
+    classes: dict[str, list] = {}
+    for s in target:
+        classes.setdefault(_cap_class(s.market_cap, limit), []).append(s)
+    order = ["unter 50 Mio. USD", "50–300 Mio. USD", "300 Mio. USD bis Grenze", "ab 300 Mio. USD"]
+    pool = target + [s for s in candidates if s.section is bt.Section.STRESS]
+    return {
+        "Abschnitte": by_section,
+        "Zielsegment": _group(target),
+        "Klassen": {c: _group(classes[c]) for c in order if c in classes},
+        "Vergleich": {
+            "messbar": _later([s for s in pool if s.status is bt.SignalStatus.OK]),
+            "weggefallen": _later([s for s in pool if s.status in (bt.SignalStatus.NO_PRICE, bt.SignalStatus.MISMATCH)]),
+        },
+    }
+
+
 def _measure(signals, prices, r: Regelwerk, tier, etf, costs, starts, draws):
     """Einzelsignale und Fenster je Abschnitt und Hälfte für eine Stufe."""
     singles = m.single_results(signals, tier, prices, etf, r.rules, costs)
+    candidates = [s for s in signals if m.eligible(s, r.rules)]
     out, key = {}, {}
     for section in bt.Section:
         sec_singles = [x for x in singles if x.signal.section is section]
@@ -177,6 +242,9 @@ def _measure(signals, prices, r: Regelwerk, tier, etf, costs, starts, draws):
             ]
         for name, part_singles, part_starts in parts:
             single_info, mean, low = _singles(part_singles, draws)
+            single_info["weggefallen"] = sum(
+                _in_part(c, section, name) for c in candidates
+            ) - len(part_singles)
             window_info, summary = _windows([windows[d] for d in part_starts])
             out[name] = {"Einzelsignale": single_info, "Fenster": window_info}
             key[name] = (summary, mean, low)
@@ -191,10 +259,12 @@ def compute(
     draws: int = 10_000,
 ) -> RunResult:
     starts = starts or {s: m.window_starts(s) for s in bt.Section}
-    tiers, deciding = {}, None
+    tiers, per_tier, deciding = {}, {}, None
     for tier in m.Tier:
         out, key = _measure(signals, prices, r, tier, r.benchmark, r.costs, starts, draws)
         tiers[tier.value] = out
+        summary, mean, low = key[bt.Section.VERDICT.value]
+        per_tier[tier.value] = verdict(summary, mean, low, r.window_rule).value
         if tier is m.Tier.REALISTIC:
             deciding = key[bt.Section.VERDICT.value]
     extra = {
@@ -210,6 +280,8 @@ def compute(
     details = {
         "Hinweis": YAHOO_NOTE,
         "Signale": {status.value: sum(s.status is status for s in signals) for status in bt.SignalStatus},
+        "Abdeckung": coverage(signals, r),
+        "Urteil je Stufe": per_tier,
         "Stufen": tiers,
         "Zusatz": extra,
     }
@@ -308,6 +380,20 @@ def _quarters(r: Regelwerk) -> set[str]:
     }
 
 
+REPORT_PATH = Path("docs") / "BACKTEST.md"
+
+
+def write_report(db: Path, out: Path) -> None:
+    from finance_ai.evaluation.backtest_report import markdown
+
+    conn = sqlite3.connect(db)
+    try:
+        out.write_text(markdown(list_runs(conn)), encoding="utf-8")
+    finally:
+        conn.close()
+    print(f"Bericht: {out}")
+
+
 def main(argv: list[str] | None = None) -> None:
     from finance_ai.config import sec_user_agent
     from finance_ai.core import storage
@@ -324,7 +410,13 @@ def main(argv: list[str] | None = None) -> None:
     cmd.add_argument("--rerun", metavar="GRUND")
     cmd.add_argument("--data", type=Path, default=Path("data"))
     cmd.add_argument("--db", type=Path, default=Path("data") / "finance_ai.sqlite")
+    rep = sub.add_parser("report", help="docs/BACKTEST.md aus den gespeicherten Läufen")
+    rep.add_argument("--data", type=Path, default=Path("data"))
+    rep.add_argument("--out", type=Path, default=REPORT_PATH)
     args = parser.parse_args(argv)
+    if args.command == "report":
+        write_report(args.data / "backtest.sqlite", args.out)
+        return
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 
     settings_conn = storage.connect(args.db)
@@ -358,5 +450,7 @@ def main(argv: list[str] | None = None) -> None:
             return compute(signal_set.signals, store.source(), r)
 
     entry = run(runs_conn, r, args.rerun, compute_fn, datetime.now(UTC))
+    runs_conn.close()
+    write_report(args.data / "backtest.sqlite", REPORT_PATH)
     print(YAHOO_NOTE)
     print(f"Urteil: {entry.verdict.value} (Regelwerk {entry.fingerprint[:12]})")

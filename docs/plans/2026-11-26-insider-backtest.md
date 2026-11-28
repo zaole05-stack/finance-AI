@@ -358,7 +358,7 @@ Der volle Lauf ist noch nicht gestartet.
 
 ### 8. Bericht
 
-- [ ] `docs/BACKTEST.md` erzeugen. Inhalt:
+- [x] `docs/BACKTEST.md` erzeugen. Inhalt:
   - ganz oben: „Das Urteil gilt nur für Signale, deren Aktie Yahoo bis heute
     führt.“ Dazu der Anteil messbarer Signale je Abschnitt und im Zielsegment
     (Börsenwert ≤ Grenze), getrennt nach Börsenwert-Klassen;
@@ -372,6 +372,14 @@ Der volle Lauf ist noch nicht gestartet.
   - Empfindlichkeit bei doppelter Slippage;
   - alle Läufe;
   - bekannte Lücken: 10b5-1 vor 2023, heutiger SIC, Yahoo.
+
+  Umgesetzt in `backtest_report.py`; der Bericht rechnet nichts selbst, er
+  liest nur `data/backtest.sqlite`. `run` schreibt ihn nach jedem Lauf neu,
+  `python -m finance_ai.evaluation.backtest report` erzeugt ihn auch so.
+  Zusätzlich: Warnung ganz oben, wenn der schlimmste Fall das Urteil kippt;
+  der Vergleich messbar/weggefallen braucht dafür neue Felder am Signal
+  (`later_bankruptcy`, `later_takeover`, `reported_price`). Die Datei selbst
+  entsteht erst mit dem echten Lauf.
 
 ### 9. Dashboard-Tab „Backtest“
 
