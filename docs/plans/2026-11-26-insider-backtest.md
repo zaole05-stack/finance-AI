@@ -294,9 +294,12 @@ Mehr sollte die Annahme nicht bewegen, sonst entscheidet sie statt des Signals.
       kein Kurs, Kurs passt nicht, Börsenwert unbekannt (`evaluation/backtest.py`).
       Auch Signale ohne Kurs bekommen einen Börsenwert (Aktienzahl × gemeldeter
       Kaufpreis), damit die Grenze für alle drei Stufen gilt.
-- [ ] Vor Schritt 6: Entscheidung zu den 50–63 % Signalen, die in der
+- [x] Vor Schritt 6: Entscheidung zu den 50–63 % Signalen, die in der
       mittleren Stufe wegfallen ([Befunde](2026-11-28-datencheck-befunde.md),
-      Abschnitt 1).
+      Abschnitt 1). Entschieden am 2026-11-28, ohne Kenntnis von Renditen:
+      **weiter mit Yahoo, Lücke offen ausweisen.** Laut Datenbankliste hat die
+      HWR kein WRDS/CRSP. Folgen für Bericht und Dashboard stehen in Schritt 8.
+      Das Team (B) bestätigt das im PR.
 - [x] Für jedes Kriterium, das Historie braucht, ein Test, der einen Blick in
       die Zukunft entlarven würde (Aktienzahl, Kurs für den Börsenwert,
       Abschnitt). Für Routinekäufer folgt er mit dem Kriterium.
@@ -331,6 +334,11 @@ Mehr sollte die Annahme nicht bewegen, sonst entscheidet sie statt des Signals.
 ### 8. Bericht
 
 - [ ] `docs/BACKTEST.md` erzeugen. Inhalt:
+  - ganz oben: „Das Urteil gilt nur für Signale, deren Aktie Yahoo bis heute
+    führt.“ Dazu der Anteil messbarer Signale je Abschnitt und im Zielsegment
+    (Börsenwert ≤ Grenze), getrennt nach Börsenwert-Klassen;
+  - wie sich messbare und weggefallene Signale unterscheiden (spätere
+    Insolvenz, spätere Übernahme), ohne Renditen der Weggefallenen;
   - geprüftes Regelwerk mit Fingerabdruck;
   - Urteil mit den Prüfwerten;
   - drei Stufen und Anteil ohne Kurs;
@@ -344,6 +352,7 @@ Mehr sollte die Annahme nicht bewegen, sonst entscheidet sie statt des Signals.
 
 - [ ] Liest nur `data/backtest.sqlite`, rechnet nichts selbst.
 - [ ] Regelwerk, Urteil, drei Stufen, beide Hälften.
+- [ ] Hinweis zur Yahoo-Lücke und Anteil messbarer Signale direkt beim Urteil.
 - [ ] Stresstest Finanzkrise als eigener Abschnitt, deutlich als
       „zählt nicht fürs Urteil, ohne Börsenwert-Grenze“ gekennzeichnet.
 - [ ] Vorsprung je 6-Monats-Fenster als Diagramm.
