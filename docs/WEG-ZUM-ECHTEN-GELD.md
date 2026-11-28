@@ -80,11 +80,55 @@ Das ersetzt für das echte Geld die Grenze von 20 % aus dem KONZEPT.
 
 ### 6. Tägliches Update und gestufte Warnungen
 
-- Jeden Tag eine Nachricht mit dem Stand des Kontos.
-- Zusätzliche Warnungen in Stufen, zum Beispiel bei −10 %, bei −20 %, beim
-  Abschalten bei −25 % und bei Programmfehlern.
+Die Benachrichtigungen baut Bereich A, weil sie aus dem stündlichen Lauf
+kommen. Das Dashboard (B) kann dieselben Kennzahlen später anzeigen.
 
-Kanal, genaue Stufen und Inhalt sind noch offen.
+**Kanäle:** Das tägliche Update kommt per Mail. Alles Dringende kommt
+zusätzlich als Push aufs Handy.
+
+**Stufen beim Kontowert:**
+
+| Stufe | Gemessen an | Kanal |
+|---|---|---|
+| −10 % | Höchststand des Kontos | Mail und Push |
+| −20 % | Höchststand des Kontos | Mail und Push |
+| −25 %: Abschalten | Einzahlung | Mail und Push |
+
+Die Warnungen messen am Höchststand, damit auch schmelzende Gewinne auffallen.
+Das Abschalten misst an der Einzahlung, damit normale Schwankungen das System
+nicht stoppen.
+
+**Programmfehler:**
+
+| Fehler | Kanal |
+|---|---|
+| Order beim Broker abgelehnt oder fehlgeschlagen | sofort Push |
+| Bestand beim Broker weicht von der Datenbank ab | sofort Push, das System hält an, bis es geklärt ist |
+| Regeln im Code geändert (Testlauf passt nicht mehr) | sofort Push |
+| Scan oder Kursabruf fehlgeschlagen, einmalig | nur in der täglichen Mail |
+| Scan oder Kursabruf fehlgeschlagen, 3 Läufe in Folge | Push |
+| Programm läuft gar nicht | Push vom Wächter |
+
+**Wächter:** Jeder Lauf schickt ein Lebenszeichen an einen Dienst außerhalb
+des Laptops (z. B. healthchecks.io). Bleibt es 3 Stunden aus, meldet sich der
+Dienst per Push. Ein Programm kann nicht selbst melden, dass es nicht läuft.
+Später soll das System auf einem Rechner laufen, der immer an ist (kleiner
+Server oder Raspberry Pi), statt auf dem Laptop.
+
+**Tägliche Mail:** nach Börsenschluss in New York, gegen 22:30 Uhr deutscher
+Zeit. An Tagen ohne Handel kommt eine kurze Mail mit „kein Handel“, damit
+eine fehlende Mail weiterhin auffällt. Inhalt, das Wichtigste oben:
+
+1. Kontowert, Veränderung zum Vortag und seit der Einzahlung, Abstand zum
+   Höchststand und zur Abschaltgrenze
+2. Vergleich mit dem ETF seit dem Start
+3. Käufe und Verkäufe des Tages mit dem auslösenden Signal (Insider, Betrag,
+   Link zur Form-4-Meldung)
+4. Offene Positionen mit Einstieg, aktuellem Stand und Ende der Haltedauer
+5. Fehler des Tages, die keinen Push ausgelöst haben
+
+Bei einem autonomen System ist die Mail die einzige Stelle, an der jede
+Entscheidung nachgeprüft werden kann.
 
 ## Was sich im KONZEPT ändert
 
@@ -103,7 +147,7 @@ Kanal, genaue Stufen und Inhalt sind noch offen.
 - [ ] Welcher Broker, mit welcher API? Geht ein eigenes Konto mit API-Handel
       von Deutschland aus, und wie werden die Steuern abgeführt?
 - [ ] Dauer des Tests auf dem Paper-Konto und messbare Bestehenskriterien
-- [ ] Benachrichtigung: Kanal, Stufen, Inhalt des täglichen Updates
+- [x] Benachrichtigung: Kanal, Stufen, Inhalt des täglichen Updates (Abschnitt 6)
 
 ### Vor dem Einfrieren des Regelwerks
 
@@ -127,7 +171,8 @@ Bereich A, sobald der Vorschlag gilt:
 
 - Anbindung an die API des Brokers (Paper- und echtes Konto)
 - Abschalten bei −25 % am Kontowert des Brokers
-- Tägliches Update und Warnungen
+- Tägliche Mail, Push-Warnungen und Lebenszeichen an den Wächter
+- Abgleich der Bestände zwischen Broker und Datenbank in jedem Lauf
 - Zurückgehaltener Zeitraum im Backtest: Prüfabschnitt endet 2022-12-31, die
   Auswertung 2023–2026 läuft nur einmal und wird gesperrt (wie die
   Neulauf-Sperre)
