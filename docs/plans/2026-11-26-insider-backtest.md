@@ -333,14 +333,28 @@ Umgesetzt in `evaluation/measure.py`, getestet nur mit festen Kursen
 
 ### 7. Lauf und Neulauf
 
-- [ ] `python -m finance_ai.evaluation.backtest run` liest das Regelwerk,
-      rechnet und speichert Urteil, Zeitstempel und Fingerabdruck des
-      Regelwerks.
-- [ ] Ein zweiter Lauf verlangt `--rerun "<Begründung>"` und verweigert sich,
-      wenn der Fingerabdruck abweicht.
-- [ ] Tests: Ohne `--rerun` wird ein zweiter Lauf verweigert. Mit `--rerun`
+Umgesetzt in `evaluation/backtest_runs.py` (`tests/test_backtest_runs.py`).
+Der volle Lauf ist noch nicht gestartet.
+
+- [x] `python -m finance_ai.evaluation.backtest run --fenster-regel <vor-etf|5pp>`
+      liest das Regelwerk, rechnet und speichert Urteil, Zeitstempel und
+      Fingerabdruck des Regelwerks in `data/backtest.sqlite`.
+      - Das Regelwerk kommt aus denselben Einstellungen wie der Testlauf, also
+        aus der Haupt-Datenbank.
+      - Aus dem Code liest der Lauf dazu die Insider-Regeln, den Zeitraum und
+        die mittlere Stufe.
+      - Die Lesart von Kriterium 1 (`--fenster-regel`) ist Pflicht und steckt
+        im Fingerabdruck.
+- [x] Ein zweiter Lauf verlangt `--rerun "<Begründung>"` und verweigert sich,
+      wenn der Fingerabdruck abweicht. Die Sperre greift, bevor Daten geladen
+      werden.
+- [x] Tests: Ohne `--rerun` wird ein zweiter Lauf verweigert. Mit `--rerun`
       und geändertem Regelwerk ebenfalls. Mit `--rerun` und gleichem
       Regelwerk steht der Lauf in der Liste.
+- [x] Urteil wie unter „Erfolgskriterium“, berechnet aus der mittleren Stufe
+      im Urteilsabschnitt. Ist Kriterium 1 erfüllt und Kriterium 2 nicht, das
+      Portfolio aber im Mittel vorn, lautet es „knapp“. Der Plan nennt diesen
+      Fall nicht ausdrücklich, B bestätigt die Lesart.
 
 ### 8. Bericht
 

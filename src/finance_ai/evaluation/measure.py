@@ -30,6 +30,7 @@ eingefroren ist.
 
 from __future__ import annotations
 
+import hashlib
 import random
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
@@ -262,8 +263,8 @@ def summarize(excesses: Sequence[Decimal]) -> Summary:
 
 
 def fixed_key(s: BacktestSignal) -> str:
-    """Eigener Schlüssel für ein Signal ohne Kurs."""
-    return f"FEST-{s.signal.id[:12]}".upper()
+    """Eigener Schlüssel für ein Signal ohne Kurs (IDs haben live alle denselben Anfang)."""
+    return f"FEST-{hashlib.sha256(s.signal.id.encode()).hexdigest()[:16]}".upper()
 
 
 class TierPrices:

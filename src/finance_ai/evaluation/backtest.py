@@ -240,3 +240,11 @@ def build_signals(
         if signal is not None:
             result.signals.append(signal)
     return result
+
+
+if __name__ == "__main__":
+    # Alles Weitere in `backtest_runs`: Liefe der Lauf hier in `__main__`, gäbe es
+    # Section und SignalStatus doppelt, und `measure` würde sie nicht erkennen.
+    from finance_ai.evaluation.backtest_runs import main
+
+    main()

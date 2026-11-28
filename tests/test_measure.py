@@ -4,6 +4,7 @@ Nur feste, ausgedachte Kurse. Echte Renditen werden hier nie berechnet:
 Das Regelwerk ist noch nicht eingefroren.
 """
 
+from dataclasses import replace
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal as D
 
@@ -316,3 +317,12 @@ def test_single_signal_refuses_holding_beyond_available_prices():
     prices = StaticPriceSource({"ABC": short, "IWM": short})
     with pytest.raises(ValueError, match="Haltedauer"):
         m.single_result(bsignal(), m.Tier.REALISTIC, prices, "IWM", HOLD, COSTS, D("1000"))
+
+
+def test_fixed_keys_differ_for_live_style_ids():
+    # Live-IDs: "insider:<accession>", alle mit gleichem Anfang.
+    a = bsignal(status=SignalStatus.NO_PRICE, case=MissingPrice.BANKRUPTCY)
+    b = bsignal(status=SignalStatus.NO_PRICE, case=MissingPrice.BANKRUPTCY)
+    a = replace(a, signal=replace(a.signal, id="insider:0000950170-15-000001"))
+    b = replace(b, signal=replace(b.signal, id="insider:0000950170-15-000002"))
+    assert m.fixed_key(a) != m.fixed_key(b)
