@@ -58,7 +58,33 @@ Geprüft wird:
 - Der Ablauf läuft wie geplant: stündlicher Lauf, Protokoll, Backup,
   Benachrichtigungen.
 
-Dauer und messbare Bestehenskriterien sind noch offen (siehe unten).
+**Verkürzte Haltedauer:** Mit 91 Tagen Haltedauer gäbe es in einem kurzen
+Test keinen Verkauf. Der Test läuft deshalb in einem eigenen Testlauf mit
+verkürzter Haltedauer (z. B. 2 Tage). Er prüft die Technik, nicht die
+Strategie. Für das echte Geld wird danach ein neuer Testlauf mit dem
+eingefrorenen Regelwerk angelegt. Die verkürzte Haltedauer darf dort nicht
+landen.
+
+**Notfall-Verkauf:** Ein Befehl schließt eine Position vorzeitig von Hand.
+Er wird nach dem Abschalten ohnehin gebraucht und im Test einmal benutzt.
+
+**Bestanden**, wenn alles eingetreten ist, frühestens nach 10 Handelstagen:
+
+| Prüfung | Bestanden, wenn |
+|---|---|
+| Kauf | mindestens 5 Käufe aus echten Signalen, ausgeführt über die API |
+| Verkauf | mindestens 5 Verkäufe nach Ablauf der verkürzten Haltedauer |
+| Notfall-Verkauf | einmal eine Position mit dem Befehl von Hand geschlossen |
+| Abschalten | in einem eigenen Testlauf mit künstlich enger Grenze (z. B. −0,5 %): Das System stoppt, schickt den Push und eröffnet danach nichts mehr |
+| Regeln | keine Order bricht eine Regel (Plätze, Cash, Börsenwert, keine Margin) |
+| Abgleich | Bestände bei Broker und Datenbank stimmen in jedem Lauf überein |
+| Wächter | einmal absichtlich den Laptop aus: Der Push vom Wächter kommt |
+| Mails | an jedem Tag des Tests kam die tägliche Mail |
+| Fehler | kein Fehler, der nicht erklärt und behoben ist |
+
+Bricht eine Order eine Regel oder weicht ein Bestand ab, beginnt der Test
+nach der Behebung von vorn. Vorübergehende Ausfälle von SEC oder Yahoo zählen
+nicht.
 
 ### 4. Echtes Geld: autonom ab dem ersten Tag
 
@@ -146,7 +172,7 @@ Entscheidung nachgeprüft werden kann.
 
 - [ ] Welcher Broker, mit welcher API? Geht ein eigenes Konto mit API-Handel
       von Deutschland aus, und wie werden die Steuern abgeführt?
-- [ ] Dauer des Tests auf dem Paper-Konto und messbare Bestehenskriterien
+- [x] Dauer des Tests auf dem Paper-Konto und messbare Bestehenskriterien (Abschnitt 3)
 - [x] Benachrichtigung: Kanal, Stufen, Inhalt des täglichen Updates (Abschnitt 6)
 
 ### Vor dem Einfrieren des Regelwerks
@@ -171,6 +197,7 @@ Bereich A, sobald der Vorschlag gilt:
 
 - Anbindung an die API des Brokers (Paper- und echtes Konto)
 - Abschalten bei −25 % am Kontowert des Brokers
+- Befehl für den Notfall-Verkauf einer Position
 - Tägliche Mail, Push-Warnungen und Lebenszeichen an den Wächter
 - Abgleich der Bestände zwischen Broker und Datenbank in jedem Lauf
 - Zurückgehaltener Zeitraum im Backtest: Prüfabschnitt endet 2022-12-31, die
