@@ -11,10 +11,20 @@ from collections.abc import Iterable
 from datetime import UTC, datetime
 from decimal import Decimal
 from os import PathLike
+from pathlib import Path
 
+from finance_ai.core.backup import backup
 from finance_ai.core.models import Order, Position, Side, Signal
 
-SCHEMA = """
+# Schema-Änderungen kommen nur als neue Migration ans Ende dieser Liste.
+# Eine Migration, die schon in einer Datenbank gelaufen ist, wird nie mehr
+# geändert. Die Nummer einer Migration ist ihre Position + 1 und steht nach
+# dem Lauf in `PRAGMA user_version`.
+#
+# Migration 1 ist das Schema vor Einführung der Migrationen. Sie nutzt
+# `IF NOT EXISTS`, damit ältere Datenbanken ohne Versionsnummer (Version 0,
+# z. B. data/demo.sqlite) ohne Datenverlust auf Version 1 kommen.
+_SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS signals (
     id          TEXT PRIMARY KEY,
     expert      TEXT NOT NULL,
@@ -75,16 +85,78 @@ CREATE TABLE IF NOT EXISTS price_bars (
     CHECK (bar_end > bar_start)
 );
 CREATE INDEX IF NOT EXISTS price_bars_end ON price_bars (ticker, bar_end);
+
+-- Im Dashboard änderbare Einstellungen (core/settings.py).
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
+MIGRATIONS: tuple[str, ...] = (_SCHEMA_V1,)
 
-def connect(path: str | PathLike[str] = ":memory:") -> sqlite3.Connection:
-    """Öffnet die Datenbank und legt fehlende Tabellen an."""
+
+class SchemaTooNewError(RuntimeError):
+    """Die Datenbank wurde von einer neueren Programmversion geschrieben."""
+
+
+def connect(
+    path: str | PathLike[str] = ":memory:",
+    backup_dir: str | PathLike[str] | None = None,
+    now: datetime | None = None,
+) -> sqlite3.Connection:
+    """Öffnet die Datenbank und bringt ihr Schema auf den neuesten Stand.
+
+    Stehen Migrationen an und enthält die Datei schon Tabellen, wird vorher
+    eine Sicherungskopie angelegt: in `backup_dir`, sonst im Ordner `backups`
+    neben der Datenbank.
+    """
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.executescript(SCHEMA)
+    try:
+        if pending_migrations(conn) and _has_tables(conn) and str(path) != ":memory:":
+            target = Path(backup_dir) if backup_dir is not None else Path(path).parent / "backups"
+            backup(conn, target, "vor_migration", now or datetime.now(UTC))
+        migrate(conn)
+    except BaseException:
+        conn.close()
+        raise
     return conn
+
+
+def schema_version(conn: sqlite3.Connection) -> int:
+    return conn.execute("PRAGMA user_version").fetchone()[0]
+
+
+def pending_migrations(conn: sqlite3.Connection) -> range:
+    """Nummern der Migrationen, die in dieser Datenbank noch fehlen."""
+    version = schema_version(conn)
+    if version > len(MIGRATIONS):
+        raise SchemaTooNewError(
+            f"Datenbank hat Schema-Version {version}, dieses Programm kennt nur bis "
+            f"{len(MIGRATIONS)}. Programm aktualisieren, nicht die Datenbank."
+        )
+    return range(version + 1, len(MIGRATIONS) + 1)
+
+
+def migrate(conn: sqlite3.Connection) -> None:
+    """Führt die fehlenden Migrationen aus, jede in einer eigenen Transaktion.
+
+    Schlägt eine Migration fehl, bleibt die Datenbank auf dem Stand davor.
+    """
+    for number in pending_migrations(conn):
+        script = f"BEGIN;\n{MIGRATIONS[number - 1]}\nPRAGMA user_version = {number};\nCOMMIT;"
+        try:
+            conn.executescript(script)
+        except BaseException:
+            if conn.in_transaction:
+                conn.rollback()
+            raise
+
+
+def _has_tables(conn: sqlite3.Connection) -> bool:
+    return conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' LIMIT 1").fetchone() is not None
 
 
 def save_signal(conn: sqlite3.Connection, signal: Signal) -> None:

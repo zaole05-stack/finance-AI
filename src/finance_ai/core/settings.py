@@ -19,13 +19,7 @@ from finance_ai.paper_trading.costs import CostModel
 # Vorläufig. Welcher Small-Cap-ETF gilt, ist in KONZEPT.md noch offen.
 DEFAULT_BENCHMARK = "IWM"
 _KEY = "settings"
-
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS settings (
-    key   TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-);
-"""
+# Die Tabelle `settings` legt die Migration in core/storage.py an.
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,7 +40,6 @@ class Settings:
 
 
 def load_settings(conn: sqlite3.Connection) -> Settings:
-    conn.executescript(SCHEMA)
     row = conn.execute("SELECT value FROM settings WHERE key = ?", (_KEY,)).fetchone()
     if row is None:
         return Settings()
@@ -89,7 +82,6 @@ def save_settings(conn: sqlite3.Connection, settings: Settings) -> None:
             for name in ("fee_fixed", "fee_rate", "slippage_rate", "tax_rate")
         },
     }
-    conn.executescript(SCHEMA)
     with conn:
         conn.execute(
             "INSERT INTO settings VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
