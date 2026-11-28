@@ -74,6 +74,21 @@ def _coverage_rows(groups: dict) -> list[list[str]]:
     return [[name, g["messbar"], g["ohne Kurs"], _pct(g["Anteil messbar"])] for name, g in groups.items()]
 
 
+def criteria(d: dict, r: dict) -> list[str]:
+    """Die beiden Prüfwerte des Urteils als Sätze, für Bericht und Dashboard."""
+    dec = d["Stufen"][DECIDING][DEC]
+    share_key = "Anteil ≥ 5 Pp" if r.get("Fenster_Regel") == "5pp" else "Anteil vor ETF"
+    w, s = dec["Fenster"], dec["Einzelsignale"]
+    return [
+        f"Vorsprung je 6-Monats-Fenster im Mittel {_pp(w['Mittel'])} "
+        f"(nötig: mindestens +5,0 Pp), {share_key.replace('Anteil', 'Anteil der Fenster')} "
+        f"{_pct(w[share_key])} (nötig: mindestens 60 %), aus {w['Anzahl']} Fenstern.",
+        f"Vorsprung je Einzelsignal im Mittel {_pp(s['Mittel'])}, "
+        f"95-%-Intervall {_ci(s['KI 95 %'])} (nötig: untere Grenze über null), "
+        f"aus {s['Anzahl']} Signalen. Block-Bootstrap nach Kalendermonat.",
+    ]
+
+
 def markdown(entries: Sequence[RunEntry]) -> str:
     lines = ["# Backtest des Insider-Experten", ""]
     if not entries:
@@ -110,21 +125,11 @@ def markdown(entries: Sequence[RunEntry]) -> str:
     lines += ["## Regelwerk", "", f"Fingerabdruck: `{last.fingerprint}`", ""]
     lines += _table(["Regel", "Wert"], [[k, f"`{v}`"] for k, v in r.items()])
 
-    dec = d["Stufen"][DECIDING][DEC]
-    rule = r.get("Fenster_Regel")
-    share_key = "Anteil ≥ 5 Pp" if rule == "5pp" else "Anteil vor ETF"
     lines += [
         "## Urteil", "",
         f"**{last.verdict.value}** (mittlere Stufe, Urteilsabschnitt, ETF {r['ETF']})", "",
-        f"1. Vorsprung je 6-Monats-Fenster im Mittel {_pp(dec['Fenster']['Mittel'])} "
-        f"(nötig: mindestens +5,0 Pp), {share_key.replace('Anteil', 'Anteil der Fenster')} "
-        f"{_pct(dec['Fenster'][share_key])} (nötig: mindestens 60 %), "
-        f"aus {dec['Fenster']['Anzahl']} Fenstern.",
-        f"2. Vorsprung je Einzelsignal im Mittel {_pp(dec['Einzelsignale']['Mittel'])}, "
-        f"95-%-Intervall {_ci(dec['Einzelsignale']['KI 95 %'])} (nötig: untere Grenze über null), "
-        f"aus {dec['Einzelsignale']['Anzahl']} Signalen. Block-Bootstrap nach Kalendermonat.", "",
+        *[f"{i}. {c}" for i, c in enumerate(criteria(d, r), 1)], "",
     ]
-
     lines += ["## Drei Stufen", "",
               "Signale ohne Kurs: optimistisch fallen sie weg, vorsichtig-realistisch (entscheidet) "
               "Übernahme 0 %, Pleite und Unbekanntes −55 %, im schlimmsten Fall alle −100 %.", ""]

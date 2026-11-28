@@ -383,15 +383,21 @@ Der volle Lauf ist noch nicht gestartet.
 
 ### 9. Dashboard-Tab „Backtest“
 
-- [ ] Liest nur `data/backtest.sqlite`, rechnet nichts selbst.
-- [ ] Regelwerk, Urteil, drei Stufen, beide Hälften.
-- [ ] Hinweis zur Yahoo-Lücke und Anteil messbarer Signale direkt beim Urteil.
-- [ ] Stresstest Finanzkrise als eigener Abschnitt, deutlich als
+- [x] Liest nur `data/backtest.sqlite`, rechnet nichts selbst.
+- [x] Regelwerk, Urteil, drei Stufen, beide Hälften.
+- [x] Hinweis zur Yahoo-Lücke und Anteil messbarer Signale direkt beim Urteil.
+- [x] Stresstest Finanzkrise als eigener Abschnitt, deutlich als
       „zählt nicht fürs Urteil, ohne Börsenwert-Grenze“ gekennzeichnet.
-- [ ] Vorsprung je 6-Monats-Fenster als Diagramm.
-- [ ] Einzelsignale mit Quellenlink und Status.
-- [ ] Liste aller Läufe mit Begründung.
-- [ ] Ohne Backtest-Datei ein Hinweis, wie man ihn startet.
+- [x] Vorsprung je 6-Monats-Fenster als Diagramm.
+- [x] Einzelsignale mit Quellenlink und Status.
+- [x] Liste aller Läufe mit Begründung.
+- [x] Ohne Backtest-Datei ein Hinweis, wie man ihn startet.
+
+  Umgesetzt in `dashboard/backtest_view.py` (ohne Streamlit, getestet) und
+  `page_backtest` in `app.py`. Tabellen und Prüfwerte kommen aus denselben
+  Funktionen wie `docs/BACKTEST.md`. Für Diagramm und Signalliste speichert
+  der Lauf zusätzlich `Fensterverlauf` und `Einzelsignale` (nur mittlere
+  Stufe). Pfad: neben `FINANCE_AI_DB`, oder `FINANCE_AI_BACKTEST_DB`.
 
 ### 10. Abschluss
 

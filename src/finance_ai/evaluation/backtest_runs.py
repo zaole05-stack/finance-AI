@@ -229,10 +229,14 @@ def _measure(signals, prices, r: Regelwerk, tier, etf, costs, starts, draws):
     singles = m.single_results(signals, tier, prices, etf, r.rules, costs)
     candidates = [s for s in signals if m.eligible(s, r.rules)]
     out, key = {}, {}
+    trace = {"Fenster": {}, "Signale": {x.signal.signal.id: _num(x.excess) for x in singles}}
     for section in bt.Section:
         sec_singles = [x for x in singles if x.signal.section is section]
         sec_starts = starts[section]
         windows = {d: m.run_window(signals, tier, d, section, prices, etf, r.rules, costs) for d in sec_starts}
+        trace["Fenster"][section.value] = [
+            {"Start": d.isoformat(), "Vorsprung": _num(windows[d].excess)} for d in sec_starts
+        ]
         parts = [(section.value, sec_singles, sec_starts)]
         if section is bt.Section.VERDICT:
             first, second = m.halves(sec_starts)
@@ -248,7 +252,24 @@ def _measure(signals, prices, r: Regelwerk, tier, etf, costs, starts, draws):
             window_info, summary = _windows([windows[d] for d in part_starts])
             out[name] = {"Einzelsignale": single_info, "Fenster": window_info}
             key[name] = (summary, mean, low)
-    return out, key
+    return out, key, trace
+
+
+def _signal_rows(signals: Sequence[bt.BacktestSignal], excess: dict[str, float]) -> list[dict]:
+    """Jedes Signal mit Status und Quelle, Vorsprung aus der entscheidenden Stufe."""
+    return [
+        {
+            "Meldetag": s.filing_date.isoformat(),
+            "Abschnitt": s.section.value,
+            "Ticker": s.signal.ticker,
+            "Status": s.status.value,
+            "ohne Kurs": None if s.missing_case is None else s.missing_case.value,
+            "Börsenwert": None if s.market_cap is None else _num(s.market_cap),
+            "Vorsprung": excess.get(s.signal.id),
+            "Quelle": s.signal.source_url,
+        }
+        for s in sorted(signals, key=lambda s: (s.filing_date, s.signal.ticker))
+    ]
 
 
 def compute(
@@ -259,14 +280,14 @@ def compute(
     draws: int = 10_000,
 ) -> RunResult:
     starts = starts or {s: m.window_starts(s) for s in bt.Section}
-    tiers, per_tier, deciding = {}, {}, None
+    tiers, per_tier, deciding, trace = {}, {}, None, None
     for tier in m.Tier:
-        out, key = _measure(signals, prices, r, tier, r.benchmark, r.costs, starts, draws)
+        out, key, tier_trace = _measure(signals, prices, r, tier, r.benchmark, r.costs, starts, draws)
         tiers[tier.value] = out
         summary, mean, low = key[bt.Section.VERDICT.value]
         per_tier[tier.value] = verdict(summary, mean, low, r.window_rule).value
         if tier is m.Tier.REALISTIC:
-            deciding = key[bt.Section.VERDICT.value]
+            deciding, trace = key[bt.Section.VERDICT.value], tier_trace
     extra = {
         "doppelte Slippage": _measure(
             signals, prices, r, m.Tier.REALISTIC, r.benchmark, m.double_slippage(r.costs), starts, draws
@@ -284,6 +305,9 @@ def compute(
         "Urteil je Stufe": per_tier,
         "Stufen": tiers,
         "Zusatz": extra,
+        # Nur die entscheidende Stufe, für Diagramm und Liste im Dashboard.
+        "Fensterverlauf": trace["Fenster"],
+        "Einzelsignale": _signal_rows(signals, trace["Signale"]),
     }
     return RunResult(result, details)
 

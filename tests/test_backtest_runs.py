@@ -195,3 +195,24 @@ def test_coverage_counts_measurable_by_section_and_size_without_returns():
     assert c["Vergleich"]["weggefallen"] == {"Anzahl": 1, "später Insolvenz": 1.0, "später Übernahme": 0.0}
     # Zielsegment plus Stresstest: 3 messbare, davon 1 später übernommen.
     assert c["Vergleich"]["messbar"]["später Übernahme"] == 0.3333
+
+
+def test_compute_stores_window_series_and_every_signal_for_the_dashboard():
+    from finance_ai.data.sec_company import MissingPrice
+    from finance_ai.evaluation.backtest import SignalStatus
+
+    prices = StaticPriceSource({
+        "ABC": series(date(2015, 2, 2), date(2015, 10, 30), lambda d: "10" if d < date(2015, 6, 8) else "12"),
+        "IWM": series(date(2015, 2, 2), date(2015, 10, 30), "100"),
+        "IWC": series(date(2015, 2, 2), date(2015, 10, 30), "50"),
+    })
+    gone = bsignal(ticker="ZZZ", status=SignalStatus.NO_PRICE, case=MissingPrice.BANKRUPTCY)
+    gone = replace(gone, signal=replace(gone.signal, id="insider:zzz"))
+    starts = {Section.STRESS: [], Section.VERDICT: [date(2015, 3, 1), date(2015, 4, 1)]}
+    d = runs.compute([bsignal(), gone], prices, regelwerk(), starts=starts, draws=20).details
+    assert [w["Start"] for w in d["Fensterverlauf"]["Urteil"]] == ["2015-03-01", "2015-04-01"]
+    rows = {r["Ticker"]: r for r in d["Einzelsignale"]}
+    assert rows["ZZZ"]["Status"] == "kein Kurs" and rows["ZZZ"]["ohne Kurs"] == MissingPrice.BANKRUPTCY.value
+    # mittlere Stufe: Insolvenz ohne Kurs −55 % vor Steuern, also ein fester Wert
+    assert rows["ZZZ"]["Vorsprung"] < -0.3
+    assert rows["ABC"]["Vorsprung"] > 0

@@ -15,7 +15,7 @@ import streamlit as st
 from finance_ai.core import storage
 from finance_ai.core.models import Side
 from finance_ai.core.settings import Settings, load_settings, save_settings
-from finance_ai.dashboard import data
+from finance_ai.dashboard import backtest_view, data
 from finance_ai.decision.agent import DecisionRules
 from finance_ai.evaluation.report import TEST_DURATION
 from finance_ai.paper_trading.costs import CostModel
@@ -185,6 +185,85 @@ def page_settings(conn, settings: Settings) -> None:
     st.rerun()
 
 
+def _table(rows: list[dict]) -> None:
+    st.dataframe(rows, hide_index=True, use_container_width=True)
+
+
+def page_backtest() -> None:
+    path = backtest_view.backtest_path()
+    v = backtest_view.view(backtest_view.load_runs(path))
+    if v is None:
+        st.info(
+            f"Noch kein Backtest in `{path}`. Start, sobald das Regelwerk eingefroren ist:"
+        )
+        st.code(backtest_view.START_COMMAND, language="bash")
+        return
+    st.warning(f"**{v.note}**")
+    if v.warning:
+        st.error(f"**Warnung:** {v.warning}")
+    st.caption(f"Lauf vom {v.stand} · Regelwerk `{v.fingerprint[:12]}`")
+
+    st.markdown(f"### Urteil: {v.verdict}")
+    st.caption("Mittlere Stufe (vorsichtig-realistisch), Urteilsabschnitt 2011–2026.")
+    for i, c in enumerate(v.criteria, 1):
+        st.markdown(f"{i}. {c}")
+    st.markdown("**Messbare Signale** (Yahoo hat Kurse über die ganze Haltedauer)")
+    _table(v.coverage)
+    st.caption("Zielsegment (Urteilsabschnitt, Börsenwert bis zur Grenze), nach Börsenwert:")
+    _table(v.classes)
+
+    st.markdown("#### Vorsprung je 6-Monats-Fenster")
+    verdict_windows = v.windows.get("Urteil", [])
+    if verdict_windows:
+        st.bar_chart(
+            {"Vorsprung (Pp)": {w["Start"]: w["Vorsprung"] * 100 for w in verdict_windows}},
+            y_label="Pp gegenüber ETF",
+        )
+    else:
+        st.caption("Keine Fenster gespeichert.")
+
+    st.markdown("#### Drei Stufen")
+    st.caption("Signale ohne Kurs: optimistisch fallen sie weg, vorsichtig-realistisch "
+               "Übernahme 0 %, Pleite und Unbekanntes −55 %, im schlimmsten Fall alle −100 %.")
+    _table(v.tiers)
+    st.markdown("#### Hälften des Urteilsabschnitts")
+    _table(v.halves)
+    st.markdown("#### Doppelte Slippage und Zweit-ETF")
+    st.caption("Fließt nicht ins Urteil. Aussagekräftiger ist hier der Vorsprung je Signal.")
+    _table(v.extra)
+
+    st.divider()
+    st.markdown("### Stresstest Finanzkrise 2006–2011")
+    st.warning("Zählt nicht fürs Urteil, **ohne Börsenwert-Grenze**. Misst Insider-Käufe "
+               "allgemein in der Krise, nicht genau die Small-Cap-Strategie.")
+    _table(v.stress)
+    stress_windows = v.windows.get("Stresstest Finanzkrise", [])
+    if stress_windows:
+        st.bar_chart({"Vorsprung (Pp)": {w["Start"]: w["Vorsprung"] * 100 for w in stress_windows}},
+                     y_label="Pp gegenüber ETF")
+
+    st.divider()
+    with st.expander("Messbar und weggefallen"):
+        st.caption("Was später mit den Firmen geschah, laut SEC-Meldungen nach dem Meldetag.")
+        _table(v.comparison)
+    with st.expander(f"Einzelsignale ({len(v.signals)})"):
+        st.dataframe(
+            [{**s, "Vorsprung": None if s["Vorsprung"] is None else s["Vorsprung"] * 100} for s in v.signals],
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Quelle": st.column_config.LinkColumn("Quelle", display_text="öffnen"),
+                "Vorsprung": st.column_config.NumberColumn("Vorsprung (Pp)", format="%+.1f"),
+                "Börsenwert": st.column_config.NumberColumn("Börsenwert (USD)", format="%.0f"),
+            },
+        )
+    with st.expander("Regelwerk"):
+        st.caption(f"Fingerabdruck `{v.fingerprint}`")
+        _table(v.regelwerk)
+    st.markdown("#### Alle Läufe")
+    _table(v.runs)
+
+
 def main() -> None:
     st.set_page_config(page_title="finance-AI", layout="wide")
     path = data.database_path()
@@ -205,13 +284,17 @@ def main() -> None:
             else:
                 st.success("Kurse aktuell.")
 
-    overview, briefings, signals, config = st.tabs(["Übersicht", "Briefings", "Signale", "Einstellungen"])
+    overview, briefings, signals, backtest, config = st.tabs(
+        ["Übersicht", "Briefings", "Signale", "Backtest", "Einstellungen"]
+    )
     with overview:
         page_overview(data.overview(conn, settings, prices))
     with briefings:
         page_briefings(conn)
     with signals:
         page_signals(conn)
+    with backtest:
+        page_backtest()
     with config:
         page_settings(conn, settings)
 
